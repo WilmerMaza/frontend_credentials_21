@@ -1,9 +1,15 @@
-<!-- App bar (siempre la misma) -->
-<app-nav
-  (menuToggle)="toggle()"
-  [mostrarToggleMenu]="showMenuToggle()"
-  [collapsed]="collapsed()"
-></app-nav>
+<!-- App bar: skeleton o nav real -->
+@if (layoutLoading.loading()) {
+  <mat-toolbar class="topbar" [class.sidebar-collapsed]="collapsed()">
+    <app-layout-topbar-skeleton />
+  </mat-toolbar>
+} @else {
+  <app-nav
+    (menuToggle)="toggle()"
+    [mostrarToggleMenu]="showMenuToggle()"
+    [collapsed]="collapsed()"
+  ></app-nav>
+}
 
 @if (isMobile() && !collapsed()) {
   <div class="mobile-backdrop" (click)="onBackdropClick()"></div>
@@ -15,7 +21,11 @@
   [class.mobile-mode]="isMobile()"
 >
   <div class="sidebar-wrapper" [class.mobile-drawer]="isMobile()">
-    <app-sidenav [collapsed]="collapsed()" (closeSidebar)="onCloseSidebar()"></app-sidenav>
+    @if (layoutLoading.loading()) {
+      <app-layout-sidebar-skeleton />
+    } @else {
+      <app-sidenav [collapsed]="collapsed()" (closeSidebar)="onCloseSidebar()"></app-sidenav>
+    }
   </div>
 
   <div class="main-content">

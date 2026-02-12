@@ -10,6 +10,42 @@ $toolbar-h: 56px;
 $sidebar-width-open: 250px;
 $sidebar-width-collapsed: 80px;
 
+/* Topbar para skeleton (mismo posicionamiento que app-nav) */
+mat-toolbar.topbar {
+  height: 56px;
+  padding: 0 1rem;
+  background-color: #fff;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: $sidebar-width-open;
+  right: 0;
+  z-index: 1000;
+  box-shadow: none;
+  transition: left 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: calc(100vw - #{$sidebar-width-open});
+
+  &.sidebar-collapsed {
+    left: $sidebar-width-collapsed;
+    width: calc(100vw - #{$sidebar-width-collapsed});
+  }
+}
+
+@media (max-width: 767px) {
+  mat-toolbar.topbar {
+    left: 0 !important;
+    width: 100vw !important;
+
+    &.sidebar-collapsed {
+      left: 0 !important;
+      width: 100vw !important;
+    }
+  }
+}
+
 .layout-container {
   display: flex;
   height: 100vh;

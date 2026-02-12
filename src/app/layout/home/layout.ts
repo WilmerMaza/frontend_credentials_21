@@ -1,11 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnDestroy, signal, WritableSignal } from '@angular/core';
+import { Component, HostListener, inject, OnDestroy, signal, WritableSignal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { Spinner } from '../../shared/components/spinner/spinner';
+import { LayoutSidebarSkeleton } from '../widgets/layout-sidebar-skeleton/layout-sidebar-skeleton';
+import { LayoutTopbarSkeleton } from '../widgets/layout-topbar-skeleton/layout-topbar-skeleton';
 import { Nav } from '../nav/nav';
 import { Sidenav } from '../sidenav/sidenav';
 
@@ -15,19 +19,21 @@ import { Sidenav } from '../sidenav/sidenav';
   imports: [
     CommonModule,
     MatSidenavModule,
+    MatToolbarModule,
     RouterOutlet,
-    MatSidenavModule,
     MatListModule,
     MatIconModule,
-    MatSidenavModule,
     Sidenav,
     Nav,
+    LayoutTopbarSkeleton,
+    LayoutSidebarSkeleton,
     Spinner,
   ],
   templateUrl: './layout.html',
   styleUrls: ['./layout.scss'],
 })
 export class Layout implements OnDestroy {
+  protected readonly layoutLoading = inject(LayoutLoadingService);
   private readonly STORAGE_KEY = 'sidebar-collapsed';
   readonly collapsed: WritableSignal<boolean> = signal(this.getSavedState());
   readonly isMobile: WritableSignal<boolean> = signal(this.checkIsMobile());

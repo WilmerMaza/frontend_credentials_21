@@ -1,0 +1,79 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(255 255 255);
+  z-index: 2000;
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+  place-items: center;
+  padding: 1.25rem 1.5rem;
+  // background: white;
+  border-radius: 14px;
+  // box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+  min-width: 200px;
+}
+
+.sports-spinner {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  animation: spin 3s linear infinite;
+}
+
+.sport {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* tamaño uniforme */
+  width: 50px;
+  height: 50px;
+  font-size: 22px;
+
+  /* tono uniforme */
+  background-color: #1976d2; /* azul material */
+  color: #fff; /* emoji en blanco para que se vea homogéneo */
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Ubicaciones (4 puntos cardinales) */
+.sport:nth-child(1) {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.sport:nth-child(2) {
+  top: 50%;
+  right: 0;
+  transform: translate(50%, -50%);
+}
+.sport:nth-child(3) {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 50%);
+}
+.sport:nth-child(4) {
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+}
+
+.label {
+  font: 500 14px/1.2 system-ui, Roboto, Arial, sans-serif;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

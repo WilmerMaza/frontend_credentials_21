@@ -1,0 +1,158 @@
+#dinamic-table {
+  // min-width: 1071px;
+  height: auto;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 15px;
+  overflow: hidden;
+  background-color: whitesmoke;
+}
+
+.content-table {
+  overflow-x: auto;
+}
+
+table tr:first-child th /*To remove the last border*/ {
+  border-bottom: 0 solid;
+}
+
+.mat-elevation-z8 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Estilos para las filas seleccionadas */
+.mat-row.mat-row-selected {
+  background-color: lightblue; /* Cambia el color de fondo de las filas seleccionadas */
+}
+
+:host {
+  --mdc-checkbox-selected-focus-icon-color: #0c4cc8;
+  --mdc-checkbox-selected-hover-icon-color: #3776f2;
+  --mdc-checkbox-selected-icon-color: #0c4cc8;
+  --mdc-checkbox-selected-pressed-icon-color: #0c4cc8;
+  --mdc-checkbox-selected-focus-state-layer-color: #0c4cc8;
+  --mdc-checkbox-selected-hover-state-layer-color: #0c4cc8;
+  --mdc-checkbox-selected-pressed-state-layer-color: #0c4cc8;
+}
+.row-checked {
+  background: whitesmoke;
+}
+.style-paginator {
+  width: 100%;
+  ::ng-deep.mat-mdc-paginator-container {
+    justify-content: space-around;
+  }
+}
+
+.option_Accion {
+  padding-left: 30px;
+}
+.container_pointer {
+  width: 25px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  cursor: pointer;
+}
+.point {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: #0c4cc8;
+  animation: none;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.container_pointer:hover .point:nth-child(1) {
+  animation: bounce 1s infinite;
+}
+
+.container_pointer:hover .point:nth-child(2) {
+  animation: bounce 1s infinite 0.2s;
+}
+
+.container_pointer:hover .point:nth-child(3) {
+  animation: bounce 1s infinite 0.4s;
+}
+
+.style_matmenu {
+  span {
+    font-size: 12px;
+    color: #0c4cc8;
+  }
+}
+::ng-deep .mat-mdc-menu-item {
+  min-height: 30px !important;
+}
+
+.none-data {
+  padding: 100px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.content_buttons_indicators {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  button {
+    border-radius: 20px;
+    width: 60px;
+    border: none;
+    box-shadow: 0px 0px 3px;
+    font-weight: 500;
+  }
+  .buttonVer {
+    border: 1px solid #0c4cc8;
+  }
+  .disabledButtonVer {
+    cursor: default;
+    color: darkgray;
+  }
+
+  .buttonVer:active {
+    box-shadow: none;
+  }
+}
+.view-indicator {
+  border-radius: 10.547px;
+  background: #73f237;
+  box-shadow: 0px 2.8125px 2.8125px 0px rgba(0, 0, 0, 0);
+  border: none;
+  padding: 0 20px;
+  color: white;
+  font-weight: 500;
+  box-shadow: 0 0 2px 1px gray;
+}
+.view-indicator:active {
+  box-shadow: none;
+}
+.content-x-close {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  color: #0c4cc8;
+}
+
+.iconEdit-complement {
+  cursor: pointer;
+  color: #0c4cc8;
+  font-size: 16px;
+}
+.editComplementClass {
+  text-align: end;
+}

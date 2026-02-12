@@ -1,0 +1,214 @@
+.page {
+  min-height: 100vh;
+  background: #eef0f3;
+  display: flex;
+  justify-content: center;
+}
+
+.content {
+  width: min(920px, 92vw);
+  margin: auto;
+  padding: 28px 0 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Card */
+.login-card {
+  width: min(680px, 100%);
+  background: #f9f9fb;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  padding: clamp(18px, 7vw, 60px);
+}
+
+/* Si quieres sombra interna del contenido */
+.card-container {
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(10, 20, 40, 0.08);
+  padding: clamp(12px, 2.5vw, 22px);
+  background: #fff;
+}
+
+/* Tipografías */
+.institucional {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.honor {
+  font-family: 'Great Vibes', cursive;
+  color: #e9d3b3;
+}
+
+/* Header */
+.topbar {
+  background: #0c2e57;
+  color: #fff;
+  width: min(680px, 100%); /* importante: ya no fijo */
+  min-height: clamp(92px, 16vw, 140px);
+  padding: 0;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+  border-radius: 12px 12px 0 0;
+  overflow: visible;
+  position: relative;
+  border-bottom: 3px solid #e9d3b3;
+}
+
+.topbar__inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Brand layout */
+.brand {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+
+  /* Deja espacio para el escudo a la izquierda */
+  padding-left: clamp(110px, 18vw, 210px);
+  padding-right: clamp(10px, 3vw, 40px);
+}
+
+/* Escudo: anclado a la izquierda y “colgando” hacia abajo */
+.brand__logo {
+  position: absolute;
+  left: clamp(12px, 2.5vw, 24px);
+  bottom: -38px; /* hace que sobresalga */
+  width: clamp(90px, 14vw, 170px);
+  height: auto;
+  top: 5%;
+  z-index: 5;
+}
+
+/* Texto centrado real */
+.brand__text {
+  width: 100%;
+  text-align: center;
+  line-height: 1.15;
+  padding: 10%;
+}
+
+.brand__title {
+  font-size: clamp(14px, 2.2vw, 22px);
+  letter-spacing: 0.6px;
+}
+.brand_separador {
+  width: 70%;
+  height: 2px;
+  margin: 10px auto;
+  background: linear-gradient(to right, transparent 0%, #e9d3b3 12%, #e9d3b3 88%, transparent 100%);
+  border-radius: 2px;
+}
+
+.brand__subtitle {
+  font-size: clamp(12px, 1.9vw, 18px);
+  opacity: 0.95;
+}
+
+.brand__motto {
+  margin-top: clamp(4px, 1.2vw, 10px);
+  font-size: clamp(16px, 2.6vw, 25px);
+  font-style: italic;
+  opacity: 0.95;
+}
+
+/* Form */
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.full {
+  width: 100%;
+}
+
+.login-title {
+  margin: 6px 0 6px;
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 700;
+  text-align: center;
+  color: #0b1b33;
+  font-family: 'Merriweather', serif;
+}
+
+.login-subtitle {
+  margin: 0 0 22px;
+  text-align: center;
+  color: #7c8797;
+  font-size: 16px;
+}
+
+.forgot {
+  cursor: pointer;
+  color: #1d2b3a;
+  text-decoration: none;
+  width: fit-content;
+  margin: 2px 0 8px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.login-btn {
+  height: 52px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.login-btn.mat-mdc-button-base:not(:disabled) {
+  background: #163665 !important;
+}
+
+.register {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  color: #1d2b3a;
+
+  a {
+    cursor: pointer;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+}
+
+/* Evita “40vh” en móvil (te crea un scroll raro) */
+.spacer {
+  height: 24px;
+}
+
+/* Ajustes mobile finos */
+@media (max-width: 600px) {
+  .content {
+    padding: 16px 0 24px;
+  }
+
+  .topbar {
+    min-height: 92px;
+  }
+
+  .brand {
+    padding-left: 86px; /* espacio para escudo */
+    padding-right: 12px;
+  }
+
+  .brand__logo {
+    width: 90px;
+    margin-top: 6px;
+    top: 0%;
+  }
+}

@@ -1,0 +1,206 @@
+<div id="dinamic-table">
+  <div class="content-table">
+    <table
+      mat-table
+      [dataSource]="dataSource"
+      class="mat-elevation-z0"
+      multiTemplateDataRows
+    >
+      @if (isCheckBox) {
+      <ng-container matColumnDef="select">
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox
+            (change)="$event ? toggleAllRows() : null"
+            [checked]="selection.hasValue() && isAllSelected()"
+            [indeterminate]="selection.hasValue() && !isAllSelected()"
+            [aria-label]="checkboxLabel()"
+          >
+          </mat-checkbox>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <mat-checkbox
+            (click)="$event.stopPropagation()"
+            (change)="
+              $event ? selection.toggle(row) && dataActionCheck($event) : null
+            "
+            [checked]="selection.isSelected(row)"
+            [aria-label]="checkboxLabel(row)"
+          >
+          </mat-checkbox>
+        </td> </ng-container
+      >} @for (item of displayedColumns; track $index) {
+      <ng-container [matColumnDef]="item.displayname">
+        <th mat-header-cell *matHeaderCellDef>
+          @if (item.displayname == 'noName' || item?.module == 'complements') {
+
+          <span></span>
+          <!--  contenido cuando se cumple la condición  -->
+
+          } @else {
+
+          {{ item.displayname | uppercase }}
+          <!--  encabezado normal  -->
+
+          }
+        </th>
+        @if (item.displayname === 'acción') {
+        <ng-container>
+          <td mat-cell *matCellDef="let element" class="option_Accion">
+            @if (editComplement) {
+
+            <!-- ① Icono de editar -->
+            <div class="editComplementClass">
+              <span
+                class="iconEdit-complement"
+                (click)="dataAction('edit', element)"
+              >
+                <mat-icon>edit</mat-icon>
+              </span>
+            </div>
+
+            } @else {
+
+            <!-- ② Botón de puntos que abre el menú principal -->
+            <div class="container_pointer" [matMenuTriggerFor]="menuAction">
+              <div class="point"></div>
+              <div class="point"></div>
+              <div class="point"></div>
+            </div>
+
+            <!-- ③ Menú principal -->
+            <mat-menu #menuAction="matMenu">
+              @for (m of item.menu; track $index) {
+              <button
+                mat-menu-item
+                class="style_matmenu"
+                (mouseover)="m.action === 'Menu' ? mouseOver($index) : null"
+                (click)="m.action !== 'Menu' ? dataAction(m, element) : null"
+                [matMenuTriggerFor]="m.action === 'Menu' ? SubMenu : null"
+              >
+                <span>{{ m.text }}</span>
+              </button>
+              }
+            </mat-menu>
+
+            <!-- ④ Sub-menú -->
+            <mat-menu #SubMenu="matMenu">
+              @for (sub of item.menu[indexSubMenu].menu; track $index) {
+              <button
+                mat-menu-item
+                class="style_matmenu"
+                (click)="dataAction(sub, element)"
+                [disabled]="
+                  ['verEjercicios', 'ver indicador', 'ver rubrica'].includes(
+                    sub.action
+                  ) && !element.HasIndicators
+                "
+              >
+                <span>{{ sub.text }}</span>
+              </button>
+              }
+            </mat-menu>
+
+            }
+          </td> </ng-container
+        >} @if (item.displayname !== 'acción') {
+        <ng-container>
+          <td mat-cell *matCellDef="let element">
+            @if (item.type !== 'date' && item.type.type !== 'buttons') {
+            <div>
+              {{ element[item.name] }}
+            </div>
+            } @if(item.type === 'date'){
+            <div>
+              {{ element[item.name] | date : item.attr }}
+            </div>
+            } @if (item.type === 'buttons') {
+            <div class="content_buttons_indicators">
+              <button
+                [ngClass]="{
+                  buttonVer: element.HasIndicators,
+                  disabledButtonVer: !element.HasIndicators
+                }"
+                (click)="
+                  element.HasIndicators
+                    ? dataAction('ver indicador', element)
+                    : null
+                "
+              >
+                Ver
+              </button>
+            </div>
+            } @if (item.type === 'button indicador') {
+            <div>
+              <button
+                class="view-indicator"
+                (click)="dataAction('ver indicador', element)"
+              >
+                Ver indicador
+              </button>
+            </div>
+            } @if (item.type === 'buttonX') {
+            <div>
+              <div class="content-x-close">
+                <mat-icon
+                  class="closeButtonModal"
+                  (click)="dataAction('eliminar', element)"
+                  >close</mat-icon
+                >
+              </div>
+            </div>
+            } @if (item.type === 'check') {
+            <div>
+              <mat-checkbox
+                (click)="$event.stopPropagation()"
+                (change)="
+                  $event
+                    ? selection.toggle(element) && dataActionCheck($event)
+                    : null
+                "
+                [checked]="selection.isSelected(element)"
+                [aria-label]="checkboxLabel(element)"
+              >
+              </mat-checkbox>
+            </div>
+            } @if (item.type === 'button Ver') {
+            <div>
+              <button
+                class="view-indicator"
+                (click)="dataAction('ver ejercicio', element)"
+              >
+                Ver
+              </button>
+            </div>
+            }
+          </td> </ng-container
+        >} </ng-container
+      >}
+
+      <tr mat-header-row *matHeaderRowDef="columnsToDisplay"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: columnsToDisplay"
+        [ngClass]="{ 'row-checked': isCheckBox && selection.isSelected(row) }"
+      ></tr>
+    </table>
+    @if (dataSource.data.length === 0) {
+    <div class="none-data">
+      {{ noneData }}
+    </div>
+    }
+  </div>
+  @if (isPaginador) {
+  <mat-paginator
+    class="style-paginator"
+    (page)="handlePageEvent($event)"
+    [length]="length"
+    [pageSize]="pageSize"
+    [disabled]="disabled"
+    [showFirstLastButtons]="showFirstLastButtons"
+    [pageSizeOptions]="showPageSizeOptions ? pageSizeOptions : []"
+    [hidePageSize]="hidePageSize"
+    [pageIndex]="pageIndex"
+  >
+  </mat-paginator
+  >}
+</div>

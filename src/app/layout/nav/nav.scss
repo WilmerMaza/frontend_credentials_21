@@ -1,0 +1,71 @@
+.topbar {
+  height: 56px;
+  padding: 0 1rem;
+  background-color: #FFFFFF;
+  border: none;
+  border-bottom: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  top: 0;
+  left: 250px;
+  right: 0;
+  z-index: 1000;
+  box-shadow: none;
+  transition: left 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: calc(100vw - 250px);
+
+  &.sidebar-collapsed {
+    left: 80px;
+    width: calc(100vw - 80px);
+  }
+}
+
+/* Navbar responsivo para móvil */
+@media (max-width: 767px) {
+  .topbar {
+    left: 0 !important;
+    width: 100vw !important;
+
+    &.sidebar-collapsed {
+      left: 0 !important;
+      width: 100vw !important;
+    }
+  }
+}
+
+.menu-toggle {
+  svg {
+    color: #333;
+    transition: color 0.2s ease;
+  }
+
+  &:hover svg {
+    color: #000;
+  }
+ 
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+
+  svg {
+    color: #333;
+    transition: color 0.2s ease;
+    width: 24px;
+    height: 24px;
+  }
+
+  &:hover svg {
+    color: #000;
+  }
+}

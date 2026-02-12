@@ -1,0 +1,221 @@
+<div class="reg-layout">
+  <div class="reg-overlay"></div>
+
+  <div class="reg-wrap">
+    <!-- Encabezado -->
+    <div class="reg-heading">
+      <h1 class="reg-heading__title">Registro de personal</h1>
+      <p class="reg-heading__subtitle">
+        Complete la información para generar se u identificación militar.
+      </p>
+    </div>
+
+    <mat-card class="reg-panel" appearance="outlined">
+      <mat-card-content class="reg-panel__content">
+        <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()" class="reg-form ui-form">
+          <div class="reg-form-grid">
+            <!-- Columna izquierda -->
+            <div class="reg-col">
+              <div class="reg-section-title">
+                <mat-icon>photo_camera</mat-icon>
+                <span>Fotografía Oficial</span>
+              </div>
+
+              <!-- Dropzone -->
+              <input
+                #fileInput
+                type="file"
+                accept="image/png,image/jpeg"
+                hidden
+                (change)="onPhotoSelected($event)"
+              />
+
+              <div
+                class="reg-dropzone"
+                role="button"
+                tabindex="0"
+                (click)="fileInput.click()"
+                (keydown.enter)="fileInput.click()"
+                (keydown.space)="$event.preventDefault(); fileInput.click()"
+              >
+                <mat-icon class="reg-dropzone__icon">ios_share</mat-icon>
+                <div class="reg-dropzone__text">
+                  <div>Haga clic o arrastre una fotografía tipo<br />carnet</div>
+                  <small>Formato: JPG, PNG (máx. 5MB)</small>
+                </div>
+              </div>
+
+              <!-- Nombre -->
+              <div class="reg-field-label">
+                <mat-icon>person</mat-icon>
+                <span>Nombre Completo</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <input
+                  matInput
+                  formControlName="fullName"
+                  placeholder="Ej: Juan Carlos Pérez Gómez"
+                />
+                @if (
+                  registrationForm.controls.fullName.touched &&
+                  registrationForm.controls.fullName.hasError('required')
+                ) {
+                  <mat-error>El nombre es requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <!-- Identificación -->
+              <div class="reg-field-label">
+                <mat-icon>badge</mat-icon>
+                <span>Número de Identificación</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <input matInput formControlName="idNumber" placeholder="MIL-2025-001234" />
+                @if (
+                  registrationForm.controls.idNumber.touched &&
+                  registrationForm.controls.idNumber.hasError('required')
+                ) {
+                  <mat-error>El número de identificación es requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <!-- Nacimiento -->
+              <div class="reg-field-label">
+                <mat-icon>calendar_month</mat-icon>
+                <span>Fecha de Nacimiento</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <input
+                  matInput
+                  [matDatepicker]="birthPicker"
+                  formControlName="birthDate"
+                  placeholder="dd/mm/aaaa"
+                />
+                <mat-datepicker-toggle matSuffix [for]="birthPicker"></mat-datepicker-toggle>
+                <mat-datepicker #birthPicker></mat-datepicker>
+
+                @if (
+                  registrationForm.controls.birthDate.touched &&
+                  registrationForm.controls.birthDate.hasError('required')
+                ) {
+                  <mat-error>La fecha de nacimiento es requerida</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <!-- Columna derecha -->
+            <div class="reg-col">
+              <!-- Duplicados (tal cual venían) -->
+              <div class="reg-field-label">
+                <mat-icon>person</mat-icon>
+                <span>Nombre Completo</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <input
+                  matInput
+                  formControlName="fullName"
+                  placeholder="Ej: Juan Carlos Pérez Gómez"
+                />
+              </mat-form-field>
+
+              <div class="reg-field-label">
+                <mat-icon>badge</mat-icon>
+                <span>Número de Identificación</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <input matInput formControlName="idNumber" placeholder="MIL-2025-001234" />
+                <mat-icon matSuffix>expand_more</mat-icon>
+              </mat-form-field>
+
+              <div class="reg-field-label">
+                <mat-icon>military_tech</mat-icon>
+                <span>Rango Militar</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <mat-select formControlName="rank" placeholder="Seleccione rango">
+                  @for (rank of ranks; track rank.value) {
+                    <mat-option [value]="rank.value">{{ rank.label }}</mat-option>
+                  }
+                </mat-select>
+
+                @if (
+                  registrationForm.controls.rank.touched &&
+                  registrationForm.controls.rank.hasError('required')
+                ) {
+                  <mat-error>El rango es requerido</mat-error>
+                }
+              </mat-form-field>
+
+              <div class="reg-field-label">
+                <mat-icon>calendar_month</mat-icon>
+                <span>Fecha de Ingreso</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <input
+                  matInput
+                  [matDatepicker]="admissionPicker"
+                  formControlName="admissionDate"
+                  placeholder="dd/mm/aaaa"
+                />
+                <mat-datepicker-toggle matSuffix [for]="admissionPicker"></mat-datepicker-toggle>
+                <mat-datepicker #admissionPicker></mat-datepicker>
+
+                @if (
+                  registrationForm.controls.admissionDate.touched &&
+                  registrationForm.controls.admissionDate.hasError('required')
+                ) {
+                  <mat-error>La fecha de ingreso es requerida</mat-error>
+                }
+              </mat-form-field>
+
+              <div class="reg-field-label">
+                <mat-icon>mail</mat-icon>
+                <span>Correo Institucional</span>
+              </div>
+              <mat-form-field appearance="outline" class="reg-field">
+                <input
+                  matInput
+                  type="email"
+                  formControlName="email"
+                  placeholder="juan.perez@fuerzasarmadas.mil"
+                />
+
+                @if (
+                  registrationForm.controls.email.touched &&
+                  registrationForm.controls.email.hasError('required')
+                ) {
+                  <mat-error>El correo es requerido</mat-error>
+                } @else if (
+                  registrationForm.controls.email.touched &&
+                  registrationForm.controls.email.hasError('email')
+                ) {
+                  <mat-error>Ingrese un correo válido</mat-error>
+                }
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="reg-actions">
+            <button
+              mat-stroked-button
+              type="button"
+              class="ui-btn-secondary"
+              (click)="navigateTo('/')"
+            >
+              Cancelar
+            </button>
+
+            <button
+              mat-flat-button
+              type="submit"
+              class="reg-submit ui-btn-primary"
+              [disabled]="registrationForm.invalid"
+            >
+              Generar Identificación
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

@@ -1,0 +1,26 @@
+<!-- App bar (siempre la misma) -->
+<app-nav
+  (menuToggle)="toggle()"
+  [mostrarToggleMenu]="showMenuToggle()"
+  [collapsed]="collapsed()"
+></app-nav>
+
+@if (isMobile() && !collapsed()) {
+  <div class="mobile-backdrop" (click)="onBackdropClick()"></div>
+}
+
+<div
+  class="layout-container"
+  [class.sidebar-collapsed]="collapsed()"
+  [class.mobile-mode]="isMobile()"
+>
+  <div class="sidebar-wrapper" [class.mobile-drawer]="isMobile()">
+    <app-sidenav [collapsed]="collapsed()" (closeSidebar)="onCloseSidebar()"></app-sidenav>
+  </div>
+
+  <div class="main-content">
+    <router-outlet></router-outlet>
+  </div>
+</div>
+<!-- Spinner global (una sola vez) -->
+<app-spinner></app-spinner>

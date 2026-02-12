@@ -1,0 +1,128 @@
+/* =========================
+   GLOBAL FORM DESIGN SYSTEM
+   ========================= */
+
+/* ===== BOTONES ===== */
+
+.ui-btn-secondary.mat-mdc-button-base {
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.ui-btn-primary.mat-mdc-button-base {
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 10px;
+  font-weight: 800;
+  background: #2f4a2b !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(47, 74, 43, 0.22);
+  transition:
+    filter 120ms ease,
+    transform 120ms ease;
+}
+
+.ui-btn-primary.mat-mdc-button-base:not(:disabled):hover {
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.ui-btn-primary.mat-mdc-button-base:disabled {
+  background: #e5e7eb !important;
+  color: #9ca3af !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
+
+/* ===== FORM FIELDS ===== */
+
+.ui-form .mat-mdc-text-field-wrapper {
+  background: #f6f7fb !important;
+  border-radius: 10px !important;
+}
+
+.ui-form .mat-mdc-form-field-infix {
+  min-height: 44px;
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+}
+
+.ui-form .mdc-notched-outline__leading,
+.ui-form .mdc-notched-outline__notch,
+.ui-form .mdc-notched-outline__trailing {
+  border-color: rgba(17, 24, 39, 0.14) !important;
+}
+
+.ui-form .mat-mdc-form-field:hover .mdc-notched-outline__leading,
+.ui-form .mat-mdc-form-field:hover .mdc-notched-outline__notch,
+.ui-form .mat-mdc-form-field:hover .mdc-notched-outline__trailing {
+  border-color: rgba(17, 24, 39, 0.22) !important;
+}
+
+.ui-form .mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+.ui-form .mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+.ui-form .mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+  border-color: rgba(12, 46, 87, 0.55) !important;
+  border-width: 2px !important;
+}
+
+.ui-form .mat-mdc-form-field-subscript-wrapper {
+  min-height: 0;
+}
+
+.ui-form .mat-mdc-form-field-icon-prefix .mat-icon,
+.ui-form .mat-mdc-form-field-icon-suffix .mat-icon {
+  color: rgba(12, 46, 87, 0.7) !important;
+}
+
+.ui-form input::placeholder {
+  color: rgba(107, 114, 128, 0.9);
+}
+
+/* SELECT */
+.ui-form .mat-mdc-select-trigger {
+  height: 44px;
+  align-items: center;
+}
+
+/* DATEPICKER */
+.ui-form .mat-mdc-icon-button.mat-mdc-button-base {
+  width: 36px;
+  height: 36px;
+}
+
+/* =========================
+   MAT-SELECT (Dropdown) fix
+   ========================= */
+
+/* Hace que el select tenga el mismo alto que inputs */
+.ui-form .mat-mdc-select-trigger {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* Alinea el texto del select y evita que “salte” */
+.ui-form .mat-mdc-select-value {
+  display: flex;
+  align-items: center;
+}
+
+/* Tamaño y alineación del placeholder/valor */
+.ui-form .mat-mdc-select-value-text {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+/* Flecha del dropdown */
+.ui-form .mat-mdc-select-arrow {
+  color: rgba(12, 46, 87, 0.7);
+}
+
+/* Opcional: que el select no tenga padding raro extra */
+.ui-form .mat-mdc-select {
+  display: flex;
+  align-items: center;
+}

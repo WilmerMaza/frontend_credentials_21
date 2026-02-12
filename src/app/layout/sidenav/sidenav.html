@@ -1,0 +1,58 @@
+<!-- sidenav.html -->
+<div class="sidebar-container">
+  <!-- Sección superior con avatar y usuario -->
+  <div class="user-section" [class.collapsed]="collapsed()">
+    <div class="avatar-container">
+      <img [src]="avatar" class="user-avatar" alt="avatar" />
+    </div>
+
+    @if (!collapsed() && showText()) {
+      <div class="user-name">{{ username }}</div>
+    }
+  </div>
+
+  <!-- Sección de navegación unificada -->
+  <div class="navigation-section" [class.collapsed]="collapsed()">
+    <!-- Botón Inicio -->
+    <div class="nav-button-container">
+      <button
+        class="nav-button"
+        [class.collapsed]="collapsed()"
+        [class.active]="isActive('/dashboard')"
+        (click)="navigateTo('/dashboard')"
+      >
+        <mat-icon>home</mat-icon>
+        @if (!collapsed() && showText()) {
+          <span>Inicio</span>
+        }
+      </button>
+    </div>
+
+    <!-- Botones de navegación -->
+    @for (item of Menu; track $index) {
+      <div class="nav-button-container">
+        <button
+          class="nav-button"
+          [class.collapsed]="collapsed()"
+          [class.active]="isActive(item.url)"
+          (click)="navigateTo(item.url)"
+        >
+          <mat-icon>{{ item.iconComponent.name }}</mat-icon>
+          @if (!collapsed() && showText()) {
+            <span>{{ item.name }}</span>
+            @if (item.badge) {
+              <span class="badge" [class]="'badge-' + item.badge.color">{{ item.badge.text }}</span>
+            }
+          }
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Logo enap en la parte inferior -->
+  <div class="logo-section" [class.collapsed]="collapsed()">
+    <span class="hologram-text">
+      {{ `${!collapsed() ? ' ENAP ' : ''} © 2026` }}
+    </span>
+  </div>
+</div>

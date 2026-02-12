@@ -1,0 +1,37 @@
+<!-- Backdrop del modal -->
+<div class="modal-backdrop" (click)="onCancel()">
+  <!-- Modal container -->
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <!-- Icono de advertencia -->
+    <div class="modal-icon">
+      <mat-icon>logout</mat-icon>
+    </div>
+    
+    <!-- Título -->
+    <h2 class="modal-title">Cerrar Sesión</h2>
+    
+    <!-- Mensaje -->
+    <p class="modal-message">
+      ¿Estás seguro que deseas cerrar tu sesión?
+    </p>
+    
+    <!-- Botones de acción -->
+    <div class="modal-actions">
+      <button 
+        mat-button 
+        class="cancel-btn"
+        (click)="onCancel()"
+        type="button">
+        Cancelar
+      </button>
+      
+      <button 
+        mat-raised-button 
+        class="confirm-btn"
+        (click)="onConfirm()"
+        type="button">
+        Cerrar Sesión
+      </button>
+    </div>
+  </div>
+</div>

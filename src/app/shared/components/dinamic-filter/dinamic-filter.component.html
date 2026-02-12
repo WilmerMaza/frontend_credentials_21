@@ -1,0 +1,205 @@
+<div id="dinamic-filter">
+  <div class="container-everythings">
+    @if (!viewBtonFilter) {
+    <div class="container-add" (click)="actionClick('asignar')">
+      <button mat-raised-button class="btnAñadir">Asignar Deportista</button>
+    </div>
+    } @if (viewBtonFilter) {
+    <div>
+      <form [formGroup]="textForm">
+        <div class="content-form-field">
+          <mat-form-field
+            appearance="outline"
+            class="content-form-field"
+            fxFlex
+          >
+            @if (showLateralPanel) {
+            <mat-icon
+              class="material-icons-outlined mat-gray icon-filter"
+              (click)="onSubmit()"
+              matPrefix
+            >
+              search
+            </mat-icon>
+            } @else if (!clearInput) {
+            <mat-icon
+              class="material-icons-outlined mat-gray icon-filter"
+              (click)="otherOnSubmit()"
+              matPrefix
+            >
+              search
+            </mat-icon>
+            } @else {
+            <mat-icon
+              class="material-icons-outlined mat-gray icon-filter"
+              (click)="clearFilterAction()"
+              matPrefix
+            >
+              clear
+            </mat-icon>
+            }
+            <input
+              matInput
+              formControlName="textInput"
+              class="textInput"
+              placeholder="Buscar..."
+            />
+          </mat-form-field>
+        </div>
+      </form>
+    </div>
+    } @if (showDownload) {
+    <div
+      class="container-download"
+      [ngClass]="{ activeDownload: isDownload, enableDownload: !isDownload }"
+      (click)="actionClick('download')"
+    >
+      Descargar
+    </div>
+    } @if (showCombinate) {
+    <div
+      class="container-download"
+      [ngClass]="{ activeDownload: isDownload, enableDownload: !isDownload }"
+      (click)="actionClick('combinate')"
+    >
+      Combinar
+    </div>
+    } @if (showSelection) {
+    <div class="container-selection">
+      {{ selectItemCount }}
+      {{ selectItemCount > 1 ? "Seleccionados" : "Seleccionado" }}
+    </div>
+    } @if (showLateralPanel && viewBtonFilter) {
+    <div class="content-filters" (click)="showFilterToggle()">
+      <button mat-button class="btnFiltrar">Filtrar</button>
+    </div>
+    } @if (showFilter) {
+    <div class="container-prueba">
+      <div class="blockExitFilter" (click)="showFilterToggle()"></div>
+      <div class="prueba-absolute" [ngClass]="{ showfilter: showFilter }">
+        <div class="title-filter">
+          <span>Filtrar datos</span>
+        </div>
+        <div class="line">
+          <div class="line-blue"></div>
+        </div>
+        <div class="contenedorfiltro">
+          <div class="container-filters">
+            <mat-accordion class="example-accordeon-content" multi>
+              @for (item of jsonData; track $index) {
+              <mat-expansion-panel hideToggle #panel [expanded]="item.isOpen">
+                <mat-expansion-panel-header>
+                  <div class="container-header-filter">
+                    <div class="container-title-filter">
+                      {{ item.title }}
+                    </div>
+                    <div class="slide-toggle-content">
+                      <mat-slide-toggle
+                        [(ngModel)]="item.disable"
+                        (click)="enableSlideToggle($event, item)"
+                      ></mat-slide-toggle>
+                    </div>
+                  </div>
+                </mat-expansion-panel-header>
+                <div class="icon-clear-filter">
+                  @if (item.disable) {
+                  <svg
+                    (click)="clearItemFilter(item)"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                    class="bi bi-trash"
+                    viewBox="0 0 16 16"
+                  >
+                    <path
+                      d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"
+                    />
+                    <path
+                      d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"
+                    />
+                  </svg>
+                  }
+                </div>
+                @if (item.typeFilter === 'check') {
+                <section>
+                  @for (check of item.control; track $index) {
+                  <mat-checkbox
+                    [disabled]="!item.disable"
+                    class="Content-check"
+                    [(ngModel)]="check.code"
+                  >
+                    <div>
+                      <span class="nameControl">{{ check.name }}</span>
+                    </div>
+                  </mat-checkbox>
+                  }
+                </section>
+                } @if (item.typeFilter === 'input') {
+                <section>
+                  <mat-form-field
+                    appearance="outline"
+                    class="content-form-field"
+                    fxFlex
+                  >
+                    <mat-icon
+                      class="material-icons-outlined mat-gray icon-filter"
+                      matPrefix
+                      >search</mat-icon
+                    >
+                    <input
+                      matInput
+                      class="textInput"
+                      placeholder="Buscar..."
+                      [disabled]="!item.disable"
+                      [(ngModel)]="item.control[0].value"
+                      name="{{ item.property }}"
+                    />
+                  </mat-form-field>
+                </section>
+                }
+              </mat-expansion-panel>
+              }
+            </mat-accordion>
+          </div>
+          <div class="buttons-filter">
+            <div class="buttons">
+              <button mat-raised-button (click)="sendDataFilter()">
+                Aplicar filtros
+              </button>
+            </div>
+            <div class="clearFilter" (click)="clearAllFilters()">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="currentColor"
+                class="bi bi-trash"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"
+                />
+                <path
+                  d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"
+                />
+              </svg>
+              Restaurar todos los filtros
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    } @if (showButtonAdd) {
+    <div class="container-add" (click)="actionClick('add')">
+      @if (viewBtonFilter) {
+      <button mat-raised-button class="btnAñadir">
+        + Añadir {{ nameAdd }}
+      </button>
+      } @else{
+      <button mat-raised-button class="btnAñadir">+ Añadir indicador</button>
+      }
+    </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,24 @@
+<button
+  type="button"
+  class="card"
+  [class.blue]="button().tone === 'blue'"
+  [class.green]="button().tone === 'green'"
+  [class.orange]="button().tone === 'orange'"
+  [class.purple]="button().tone === 'purple'"
+  [class.red]="button().tone === 'red'"
+  (click)="goTo(button().route)"
+  [attr.aria-label]="'Ir a ' + button().title"
+>
+  <div class="card-top">
+    <span class="icon" aria-hidden="true">{{ button().icon }}</span>
+    <span class="title">{{ button().title }}</span>
+  </div>
+
+  <div class="total">{{ button().total }}</div>
+
+  @if (button().subtitle) {
+    <div class="subtitle">{{ button().subtitle }}</div>
+  }
+
+  <div class="cta">Ver detalle <span aria-hidden="true">→</span></div>
+</button>

@@ -1,0 +1,71 @@
+<div class="page">
+  <!-- Body -->
+  <div class="content">
+    <!-- Header -->
+    <mat-toolbar class="topbar" role="banner">
+      <div class="topbar__inner">
+        <div class="brand">
+          <img class="brand__logo" src="images/ENAP.png" alt="Escudo" />
+          <div class="brand__text">
+            <div class="brand__title institucional">ESCUELA NAVAL DE CADETES</div>
+            <div class="brand__subtitle institucional">ALMIRANTE PADILLA</div>
+            <div class="brand_separador"></div>
+            <div class="brand__motto honor">Honor y Tradición</div>
+          </div>
+        </div>
+      </div>
+    </mat-toolbar>
+
+    <mat-card class="login-card" appearance="outlined">
+      <mat-card-content class="card-container">
+        <h1 class="login-title">Inicio de Sesión</h1>
+        <p class="login-subtitle">Inicie sesión con su <b>identificación personal</b>.</p>
+
+        <form class="form ui-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+          <mat-form-field appearance="outline" class="full">
+            <mat-icon matPrefix>mail</mat-icon>
+            <input
+              matInput
+              formControlName="identifier"
+              placeholder="Correo Electrónico o Número de Documento"
+              autocomplete="username"
+            />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-icon matPrefix>lock</mat-icon>
+            <input
+              matInput
+              [type]="hidePassword ? 'password' : 'text'"
+              formControlName="password"
+              placeholder="Contraseña"
+              autocomplete="current-password"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="hidePassword = !hidePassword"
+              [attr.aria-label]="hidePassword ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+            >
+              <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <a class="forgot" (click)="onForgot()">¿Olvidó su contraseña?</a>
+
+          <button mat-flat-button class="login-btn ui-btn-primary" type="submit" [disabled]="form.invalid">
+            Iniciar Sesión
+          </button>
+
+          <div class="register">
+            <span>¿No tienes una cuenta?</span>
+            <a (click)="onRegister()">Registrarse</a>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <div class="spacer"></div>
+  </div>
+</div>

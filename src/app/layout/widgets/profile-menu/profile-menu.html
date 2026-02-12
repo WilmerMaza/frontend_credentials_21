@@ -1,0 +1,40 @@
+<div class="menu-container-profile">
+  <button
+    mat-icon-button
+    [matMenuTriggerFor]="mainMenu"
+    class="profile-btn"
+    aria-label="Abrir menú de perfil"
+  >
+    <mat-icon style="color: #0c2e57">account_circle</mat-icon>
+  </button>
+  <!-- Menú principal -->
+
+  <mat-menu
+    #mainMenu="matMenu"
+    [overlapTrigger]="false"
+    panelClass="fb-panel"
+    xPosition="before"
+    yPosition="below"
+  >
+    <!-- Header con avatar y nombre -->
+    <div class="fb-header">
+      <img [src]="user.avatar" alt="avatar" class="avatar" />
+      <div class="name">{{ user.name }}</div>
+    </div>
+
+    <!-- Pantalla y accesibilidad (submenu) -->
+
+    <mat-divider></mat-divider>
+
+    <button mat-menu-item class="fb-item danger" (click)="showLogoutConfirmation()">
+      <mat-icon class="lead">logout</mat-icon>
+      <span>Cerrar sesión</span>
+    </button>
+  </mat-menu>
+</div>
+
+<!-- Modal de confirmación de logout -->
+@if (showLogoutModal()) {
+  <app-logout-modal (confirmLogout)="confirmLogout()" (cancelLogout)="cancelLogout()">
+  </app-logout-modal>
+}

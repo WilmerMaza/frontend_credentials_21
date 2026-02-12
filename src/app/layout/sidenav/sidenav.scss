@@ -1,0 +1,248 @@
+/* sidenav.scss - Nuevo diseño azul degradado */
+$width-open: 250px;
+$width-collapsed: 80px;
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+/* Container principal del sidebar */
+.sidebar-container {
+  height: 100vh;
+  background: #0c2e57; /* Azul oscuro sólido */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sección del usuario en la parte superior */
+.user-section {
+  padding: 4rem 1rem 1rem; /* Aumentar espacio superior para bajar la foto */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  &.collapsed {
+    padding: 3rem 0.5rem 0.5rem;
+  }
+}
+
+/* Avatar container */
+.avatar-container {
+  margin-bottom: 1rem;
+
+  .user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    object-fit: cover;
+  }
+}
+
+/* Nombre del usuario */
+.user-name {
+  color: white;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 1rem; /* Reducir margen */
+}
+
+/* Sección de navegación unificada */
+.navigation-section {
+  flex: 1;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* Espaciado consistente entre botones */
+
+  &.collapsed {
+    padding: 0 0.5rem;
+  }
+}
+
+/* Container para cada botón de navegación */
+.nav-button-container {
+  width: 100%;
+}
+
+/* Estilo unificado para todos los botones de navegación */
+.nav-button {
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &.active {
+    background: white;
+    color: #0c2e57;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    mat-icon {
+      color: #0c2e57;
+    }
+
+    .badge {
+      background-color: #0c2e57;
+      color: white;
+    }
+  }
+
+  mat-icon {
+    color: white;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    transition: color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  span {
+    color: inherit;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .badge {
+    background-color: #3886F6;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+
+    &.badge-info {
+      background-color: #17a2b8;
+    }
+
+    &.badge-warning {
+      background-color: #ffc107;
+      color: #212529;
+    }
+
+    &.badge-success {
+      background-color: #28a745;
+    }
+  }
+
+  &.collapsed {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    padding: 0;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    span {
+      display: none;
+    }
+
+    .badge {
+      display: none;
+    }
+  }
+}
+
+/* Logo enap en la parte inferior */
+.logo-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.2rem 0;
+  position: relative;
+}
+
+/* Texto holograma */
+.hologram-text {
+  font-family: 'Inria Sans', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  position: relative;
+
+  /* color base invisible */
+  color: transparent;
+
+  /* degradado holográfico */
+  background: linear-gradient(
+    120deg,
+    #00eaff,
+    #4f8cff,
+    #7c5cff,
+    #00eaff
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  /* glow */
+  text-shadow:
+    0 0 6px rgba(0,234,255,0.6),
+    0 0 12px rgba(79,140,255,0.5),
+    0 0 20px rgba(124,92,255,0.4);
+
+  animation: hologramShift 6s ease-in-out infinite,
+             hologramFlicker 4s infinite;
+}
+
+/* línea escáner holográfico */
+.hologram-text::after {
+  content: '';
+  position: absolute;
+  left: -10%;
+  top: 0;
+  width: 120%;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255,255,255,0.15) 50%,
+    transparent 100%
+  );
+  animation: scan 5s linear infinite;
+}
+
+/* animaciones */
+@keyframes hologramShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); opacity: 0.2; }
+  50% { opacity: 0.6; }
+  100% { transform: translateY(100%); opacity: 0.2; }
+}
+
+@keyframes hologramFlicker {
+  0%, 100% { opacity: 1; }
+  45% { opacity: 0.92; }
+  48% { opacity: 0.8; }
+  52% { opacity: 0.95; }
+}
+

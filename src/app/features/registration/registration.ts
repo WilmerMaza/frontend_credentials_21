@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, afterNextRender, inject, signal } from '@angular/core';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import Swal from 'sweetalert2';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -15,18 +15,12 @@ import { LayoutLoadingService } from '../../core/services/layout-loading.service
 import { NavigationService } from '../../core/services/navigation.service';
 import { RegistrationSkeleton } from '../../layout/widgets/registration-skeleton/registration-skeleton';
 
-type RankOption = { value: string; label: string };
+import { InterEscuelas } from './components/forms/inter-escuelas/inter-escuelas';
 
-// 👇 Tipos de controles (esto elimina los “errores” del template)
-type RegistrationFormModel = {
-  fullName: string;
-  rank: string;
-  idNumber: string;
-  unit: string;
-  birthDate: Date | null;
-  admissionDate: Date | null;
-  email: string;
-};
+type RegistrationType = 'militar' | 'civil' | 'inter-escuelas';
+type IdType = 'cc' | 'ti' | 'ce' | 'pasaporte';
+
+type IdTypeOption = { value: IdType; label: string };
 
 @Component({
   selector: 'app-registration',
@@ -36,6 +30,7 @@ type RegistrationFormModel = {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,
@@ -43,7 +38,9 @@ type RegistrationFormModel = {
     MatSelectModule,
     MatIconModule,
     MatDatepickerModule,
+
     RegistrationSkeleton,
+    InterEscuelas,
   ],
 })
 export class Registration {
@@ -52,63 +49,45 @@ export class Registration {
   private readonly layoutLoading = inject(LayoutLoadingService);
 
   loading = signal(true);
-
-  // Si vas a manejar foto desde template
   selectedPhoto?: File;
 
-  readonly ranks: RankOption[] = [
-    { value: 'soldado', label: 'Soldado' },
-    { value: 'cabo', label: 'Cabo' },
-    { value: 'sargento', label: 'Sargento' },
-    { value: 'teniente', label: 'Teniente' },
-    { value: 'capitan', label: 'Capitán' },
-    { value: 'mayor', label: 'Mayor' },
-    { value: 'coronel', label: 'Coronel' },
-    { value: 'general', label: 'General' },
+  readonly types: Array<{ value: RegistrationType; label: string }> = [
+    { value: 'militar', label: 'Personal Militar' },
+    { value: 'civil', label: 'Personal Civil' },
+    { value: 'inter-escuelas', label: 'Inter-escuelas' },
   ];
 
-  private readonly fieldNames: Record<keyof RegistrationFormModel, string> = {
-    fullName: 'Nombre Completo',
-    rank: 'Rango Militar',
-    idNumber: 'Número de Identificación',
-    unit: 'Unidad Asignada',
-    birthDate: 'Fecha de Nacimiento',
-    admissionDate: 'Fecha de Ingreso',
-    email: 'Correo Electrónico',
-  };
+  readonly idTypes: IdTypeOption[] = [
+    { value: 'cc', label: 'Cédula de ciudadanía (CC)' },
+    { value: 'ti', label: 'Tarjeta de identidad (TI)' },
+    { value: 'ce', label: 'Cédula de extranjería (CE)' },
+    { value: 'pasaporte', label: 'Pasaporte' },
+  ];
 
-  // ✅ Form creado de una vez (evita null/undefined en template)
+  // ✅ Form: type + common + details
   readonly registrationForm = this.fb.group({
-    fullName: this.fb.control('', { validators: [Validators.required] }),
-    rank: this.fb.control('', { validators: [Validators.required] }),
-    idNumber: this.fb.control('', { validators: [Validators.required] }),
-    unit: this.fb.control('', { validators: [Validators.required] }),
-    birthDate: this.fb.control<Date | null>(null, { validators: [Validators.required] }),
-    admissionDate: this.fb.control<Date | null>(null, { validators: [Validators.required] }),
-    email: this.fb.control('', { validators: [Validators.required, Validators.email] }),
+    type: this.fb.control<RegistrationType>('inter-escuelas', {
+      validators: [Validators.required],
+    }),
+
+    common: this.fb.group({
+      fullName: this.fb.control('', { validators: [Validators.required] }),
+      idType: this.fb.control<IdType | ''>('', { validators: [Validators.required] }),
+      idNumber: this.fb.control('', { validators: [Validators.required] }),
+      birthDate: this.fb.control<Date | null>(null, { validators: [Validators.required] }),
+    }),
+
+    details: this.fb.group({}),
   });
 
-  // ✅ Getters “cómodos” para el HTML (opcional, pero recomendado)
-  get fullNameCtrl() {
-    return this.registrationForm.controls.fullName;
+  get detailsGroup(): FormGroup {
+    return this.registrationForm.controls.details as FormGroup;
   }
-  get idNumberCtrl() {
-    return this.registrationForm.controls.idNumber;
-  }
-  get birthDateCtrl() {
-    return this.registrationForm.controls.birthDate;
-  }
-  get admissionDateCtrl() {
-    return this.registrationForm.controls.admissionDate;
-  }
-  get rankCtrl() {
-    return this.registrationForm.controls.rank;
-  }
-  get emailCtrl() {
-    return this.registrationForm.controls.email;
-  }
-  get unitCtrl() {
-    return this.registrationForm.controls.unit;
+
+  // ✅ solo lo llama el select "type"
+  onTypeChange(next: RegistrationType): void {
+    Object.keys(this.detailsGroup.controls).forEach((k) => this.detailsGroup.removeControl(k));
+    this.detailsGroup.reset();
   }
 
   constructor() {
@@ -126,7 +105,6 @@ export class Registration {
     const file = input.files?.[0];
     if (!file) return;
 
-    // Validación simple: tipo y tamaño (5MB)
     const allowed = ['image/jpeg', 'image/png'];
     const maxBytes = 5 * 1024 * 1024;
 
@@ -158,52 +136,32 @@ export class Registration {
   async onSubmit(): Promise<void> {
     this.registrationForm.markAllAsTouched();
 
-    if (this.registrationForm.valid) {
+    if (this.registrationForm.invalid) {
       await Swal.fire({
-        icon: 'success',
-        title: 'Registro Exitoso',
-        text: 'La identificación digital ha sido generada correctamente.',
-        confirmButtonText: 'Continuar',
+        icon: 'error',
+        title: 'Formulario incompleto',
+        text: 'Por favor revisa los campos marcados.',
         confirmButtonColor: '#163665',
-        showCloseButton: true,
       });
-
-      this.navigationService.navigate('/id-card');
       return;
     }
 
-    const invalidFields = (
-      Object.keys(this.registrationForm.controls) as (keyof RegistrationFormModel)[]
-    )
-      .filter((key) => this.registrationForm.controls[key].invalid)
-      .map((key) => this.fieldNames[key] ?? String(key));
+    const payload = this.registrationForm.getRawValue();
+    console.log('payload', payload);
 
     await Swal.fire({
-      icon: 'error',
-      title: 'Formulario incompleto',
-      html: `
-        <div style="text-align:left">
-          <p>Por favor complete lo siguiente:</p>
-          <ul style="margin:8px 0 0 18px">
-            ${invalidFields.map((f) => `<li>${this.escapeHtml(f)}</li>`).join('')}
-          </ul>
-        </div>
-      `,
-      confirmButtonText: 'Entendido',
+      icon: 'success',
+      title: 'Registro Exitoso',
+      text: 'La identificación digital ha sido generada correctamente.',
+      confirmButtonText: 'Continuar',
       confirmButtonColor: '#163665',
+      showCloseButton: true,
     });
+
+    this.navigationService.navigate('/id-card');
   }
 
   navigateTo(path: string): void {
     this.navigationService.navigate(path);
-  }
-
-  private escapeHtml(input: string): string {
-    return input
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
   }
 }

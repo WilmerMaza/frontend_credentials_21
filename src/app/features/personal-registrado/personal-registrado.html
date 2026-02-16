@@ -1,0 +1,372 @@
+@if (loading()) {
+  <app-personal-registrado-skeleton />
+} @else if (isMobile()) {
+  <!-- Vista móvil -->
+  <div class="m-page">
+    <main class="m-content">
+      <h1 class="m-title">Personal registrado</h1>
+      <p class="m-subtitle">Gestione y consulte el personal militar registrado en el sistema.</p>
+
+      <!-- Métricas (scroll horizontal) -->
+      <section class="m-metrics">
+        @for (card of statCards; track card.label) {
+          <div class="metric">
+            <div class="metric-ico" [class.ok]="card.icon === 'check'" [class.off]="card.icon === 'close'" [class.warn]="card.icon === 'chat_bubble' || card.icon === 'schedule'">
+              <mat-icon>{{ card.icon }}</mat-icon>
+            </div>
+            <div>
+              <div class="metric-val">{{ card.total }}</div>
+              <div class="metric-lab">{{ card.label }}</div>
+            </div>
+          </div>
+        }
+      </section>
+
+      <!-- Acordeón filtros + CTA -->
+      <section class="card">
+        <div class="accordion">
+          <button type="button" class="accordion-head" (click)="toggleFilters()">
+            <div class="accordion-left">
+              <span class="filter-dot">
+                <mat-icon>filter_list</mat-icon>
+              </span>
+              <span class="accordion-title">Filtros de búsqueda</span>
+            </div>
+            <span class="chev" [class.chev--open]="filtersExpanded()">
+              <mat-icon>expand_more</mat-icon>
+            </span>
+          </button>
+          @if (filtersExpanded()) {
+          <div class="accordion-body">
+            <div class="field">
+              <mat-icon>search</mat-icon>
+              <input
+                type="text"
+                [formControl]="searchForm.controls.nombre"
+                placeholder="Buscar nombre o apellido"
+              />
+            </div>
+            <div class="field">
+              <mat-icon>mail</mat-icon>
+              <input
+                type="text"
+                [formControl]="searchForm.controls.correo"
+                placeholder="Correo institucional"
+              />
+            </div>
+            <div class="field">
+              <mat-icon>badge</mat-icon>
+              <input
+                type="text"
+                [formControl]="searchForm.controls.identificacion"
+                placeholder="Número de identificación"
+              />
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn primary" (click)="onSearch()">
+                <mat-icon>filter_list</mat-icon>
+                Buscar
+              </button>
+              <button type="button" class="btn ghost" (click)="onClearSearch()">Limpiar</button>
+            </div>
+          </div>
+          }
+        </div>
+        <button class="cta" (click)="navigateToRegistration()">
+          <span class="cta-ico">+</span>
+          Registrar nuevo personal
+        </button>
+      </section>
+
+      <!-- Lista móvil -->
+      <section class="list-card">
+        <div class="list-head">
+          <div class="list-title">Registros</div>
+          <div class="list-hint">{{ getPaginationHint() }}</div>
+        </div>
+
+        @for (row of pagedData(); track row.id) {
+          <article class="row-card">
+            <div class="row-top">
+              <div class="row-left">
+                <div class="photo">
+                  @if (row.photoUrl) {
+                    <img [src]="row.photoUrl" [alt]="row.nombreCompleto" />
+                  } @else {
+                    <mat-icon>person</mat-icon>
+                  }
+                </div>
+                <div>
+                  <div class="name">{{ row.nombreCompleto }}</div>
+                  <div class="meta">{{ row.identificacion }}</div>
+                </div>
+              </div>
+              <span class="badge" [class.ok]="row.estado === 'activo'" [class.warn]="row.estado === 'pendiente'" [class.off]="row.estado === 'inactivo'">
+                <span class="dot"></span>
+                {{ getEstadoLabel(row.estado) }}
+              </span>
+            </div>
+            <div class="row-grid">
+              <div class="kv">
+                <div class="k">Rango</div>
+                <div class="v">{{ row.rango }}</div>
+              </div>
+              <div class="kv">
+                <div class="k">Ingreso</div>
+                <div class="v">{{ row.fechaIngreso }}</div>
+              </div>
+              <div class="kv full">
+                <div class="k">Correo</div>
+                <div class="v">{{ row.correo }}</div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="a-btn" title="Ver" (click)="onView(row)" type="button">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button class="a-btn" title="Editar" (click)="onEdit(row)" type="button">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button class="a-btn danger" title="Eliminar" (click)="onDelete(row)" type="button">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </article>
+        }
+
+        @if (filteredData().length === 0) {
+          <div class="m-empty">No hay registros para mostrar.</div>
+        }
+
+        <!-- Paginación móvil -->
+        <div class="pager">
+          <button class="p-btn" [disabled]="pageIndex === 0" (click)="goToPage(pageIndex - 1)" type="button">
+            Anterior
+          </button>
+          <div class="p-mid">
+            @for (p of pageNumbers(); track $index) {
+              @if (p === '...') {
+                <span class="p-etc">…</span>
+              } @else {
+                <button
+                  class="p-num"
+                  [class.active]="pageIndex === $any(p) - 1"
+                  (click)="goToPage($any(p) - 1)"
+                  type="button"
+                >
+                  {{ p }}
+                </button>
+              }
+            }
+          </div>
+          <button class="p-btn" [disabled]="pageIndex >= totalPages() - 1" (click)="goToPage(pageIndex + 1)" type="button">
+            Siguiente
+          </button>
+        </div>
+      </section>
+      <div class="m-footer">ENAP © 2026</div>
+    </main>
+  </div>
+} @else {
+  <!-- Vista desktop -->
+  <div class="pr-container">
+    <!-- Page Head -->
+    <div class="pr-header">
+      <div>
+        <h1 class="pr-header__title">Personal registrado</h1>
+        <p class="pr-header__subtitle">
+          Gestione y consulte el personal militar registrado en el sistema.
+        </p>
+      </div>
+      <button class="pr-header__btn" (click)="navigateToRegistration()">
+        <mat-icon>add</mat-icon>
+        Registrar nuevo personal
+      </button>
+    </div>
+
+    <!-- Metrics -->
+    <div class="pr-metric-card">
+      <div class="pr-metrics">
+        @for (card of statCards; track card.label) {
+          <div class="pr-metric">
+            <div class="pr-metric__ico">
+              <mat-icon>{{ card.icon }}</mat-icon>
+            </div>
+            <div>
+              <div class="pr-metric__val">{{ card.total }}</div>
+              <div class="pr-metric__lab">{{ card.label }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Table Card -->
+    <div class="pr-table-card">
+      <!-- Filters (acordeón en móvil) -->
+      <div class="pr-filters-accordion">
+        <button
+          type="button"
+          class="pr-filters-trigger"
+          (click)="toggleFilters()"
+          [attr.aria-expanded]="filtersExpanded()"
+          aria-controls="pr-filters-content"
+        >
+          <mat-icon>filter_list</mat-icon>
+          <span>Filtros de búsqueda</span>
+          <mat-icon class="pr-filters-chevron">{{ filtersExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+        <div
+          id="pr-filters-content"
+          class="pr-filters"
+          [class.pr-filters--expanded]="filtersExpanded()"
+        >
+          <div class="pr-field">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              [formControl]="searchForm.controls.nombre"
+              placeholder="Buscar nombre o apellido"
+            />
+          </div>
+          <div class="pr-field">
+            <mat-icon>mail</mat-icon>
+            <input
+              type="text"
+              [formControl]="searchForm.controls.correo"
+              placeholder="Correo institucional"
+            />
+          </div>
+          <div class="pr-field">
+            <mat-icon>badge</mat-icon>
+            <input
+              type="text"
+              [formControl]="searchForm.controls.identificacion"
+              placeholder="Número de identificación"
+            />
+          </div>
+          <button type="button" class="pr-btn primary" (click)="onSearch()">
+            <mat-icon>filter_list</mat-icon>
+            Buscar
+          </button>
+          <button type="button" class="pr-btn" (click)="onClearSearch()">Limpiar</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="pr-table-wrap">
+        <table class="pr-table">
+          <thead>
+            <tr>
+              <th>Fotografía</th>
+              <th>Nombre completo</th>
+              <th>Identificación</th>
+              <th>Rango</th>
+              <th>Correo institucional</th>
+              <th>Fecha ingreso</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of pagedData(); track row.id) {
+              <tr>
+                <td>
+                  <div class="pr-cell-photo">
+                    <div class="pr-photo">
+                      @if (row.photoUrl) {
+                        <img [src]="row.photoUrl" [alt]="row.nombreCompleto" />
+                      } @else {
+                        <mat-icon>person</mat-icon>
+                      }
+                    </div>
+                    <div class="pr-name">{{ row.nombreCompleto }}</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="pr-name">{{ row.nombreCompleto }}</div>
+                  @if (row.sub) {
+                    <div class="pr-sub">{{ row.sub }}</div>
+                  }
+                </td>
+                <td class="pr-id">{{ row.identificacion }}</td>
+                <td>
+                  <div class="pr-name">{{ row.rango }}</div>
+                  <span class="pr-badge" [class.ok]="row.estado === 'activo'" [class.warn]="row.estado === 'pendiente'" [class.off]="row.estado === 'inactivo'">
+                    <span class="dot"></span>
+                    {{ getEstadoLabel(row.estado) }}
+                  </span>
+                </td>
+                <td class="pr-email">{{ row.correo }}</td>
+                <td class="pr-date">{{ row.fechaIngreso }}</td>
+                <td>
+                  <div class="pr-actions">
+                    <button class="pr-icon-btn" title="Ver" (click)="onView(row)" type="button">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button class="pr-icon-btn" title="Editar" (click)="onEdit(row)" type="button">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button class="pr-icon-btn" title="Eliminar" (click)="onDelete(row)" type="button">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (filteredData().length === 0) {
+        <div class="pr-empty">No hay registros para mostrar.</div>
+      }
+
+      <!-- Footer -->
+      <div class="pr-table-footer">
+        <div class="pr-hint">{{ getPaginationHint() }}</div>
+        <div class="pr-pager">
+          <button
+            class="pr-page"
+            [disabled]="pageIndex === 0"
+            (click)="goToPage(pageIndex - 1)"
+            type="button"
+          >
+            Anterior
+          </button>
+          @for (p of pageNumbers(); track $index) {
+            @if (p === '...') {
+              <span class="pr-page">…</span>
+            } @else {
+              <button
+                class="pr-page"
+                [class.active]="pageIndex === $any(p) - 1"
+                (click)="goToPage($any(p) - 1)"
+                type="button"
+              >
+                {{ p }}
+              </button>
+            }
+          }
+          <button
+            class="pr-page"
+            [disabled]="pageIndex >= totalPages() - 1"
+            (click)="goToPage(pageIndex + 1)"
+            type="button"
+          >
+            Siguiente
+          </button>
+          <select
+            class="pr-select"
+            [ngModel]="pageSize"
+            (ngModelChange)="onPageSizeChange($event)"
+            aria-label="Registros por página"
+          >
+            @for (opt of pageSizeOptions(); track opt) {
+              <option [ngValue]="opt">{{ opt }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+}

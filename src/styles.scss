@@ -4,7 +4,7 @@
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
-@use 'assets/styles/material-overrides.scss';
+@use 'assets/styles/material-overrides.scss' as overrides;
 @use 'assets/styles/colors.scss';
 
 html {
@@ -20,6 +20,9 @@ html {
     )
   );
 }
+
+/* ✅ Importante: aplicar overrides DESPUÉS del theme */
+@include overrides.material_overrides();
 
 body {
   // Default the application to a light color theme. This can be changed to

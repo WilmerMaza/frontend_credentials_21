@@ -1,18 +1,38 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  OnInit,
+  OnDestroy,
+  signal,
+  computed,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { CredentialViewPdfComponent, type CredentialPdfData } from './credential-view-pdf.component';
+import {
+  CredentialViewPdfComponent,
+  type CredentialPdfData,
+} from './credential-view-pdf.component';
 import type { PersonalItem } from '../personal-registrado/personal-registrado';
 import type { CredentialData } from './credential-data.types';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
 const DEFAULT_PHOTO = 'https://i.imgur.com/8Km9tLL.png';
 
-function mapPersonalItemToCredentialData(item: PersonalItem & { unidad?: string; fechaNacimiento?: string; emision?: string; validoHasta?: string; sha256?: string }): CredentialData {
+function mapPersonalItemToCredentialData(
+  item: PersonalItem & {
+    unidad?: string;
+    fechaNacimiento?: string;
+    emision?: string;
+    validoHasta?: string;
+    sha256?: string;
+  },
+): CredentialData {
   const emision = item.emision ?? item.fechaIngreso ?? '20/11/2025';
   const validoHasta = item.validoHasta ?? deriveValidoHasta(item.fechaIngreso);
   const anios = item.fechaIngreso ? calcAniosServicio(item.fechaIngreso) : 0;
@@ -27,7 +47,7 @@ function mapPersonalItemToCredentialData(item: PersonalItem & { unidad?: string;
     },
     doc: {
       numeroOficial: item.identificacion,
-      titulo: 'CREDENCIAL DE IDENTIFICACIÓN MILITAR',
+      titulo: 'CREDENCIAL DE IDENTIFICACIÓN',
       subtitulo: 'Documento Oficial Certificado',
     },
     persona: {
@@ -72,7 +92,10 @@ function calcAniosServicio(fechaIngreso: string): number {
     }
     const ingreso = new Date(y, m - 1, d);
     const hoy = new Date();
-    return Math.max(0, Math.floor((hoy.getTime() - ingreso.getTime()) / (365.25 * 24 * 60 * 60 * 1000)));
+    return Math.max(
+      0,
+      Math.floor((hoy.getTime() - ingreso.getTime()) / (365.25 * 24 * 60 * 60 * 1000)),
+    );
   } catch {
     return 0;
   }
@@ -157,7 +180,9 @@ export class CredentialView implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    const state = history.state as { credential?: PersonalItem & { unidad?: string; fechaNacimiento?: string } } | undefined;
+    const state = history.state as
+      | { credential?: PersonalItem & { unidad?: string; fechaNacimiento?: string } }
+      | undefined;
     const cred = state?.credential;
 
     if (!cred) {
@@ -165,7 +190,13 @@ export class CredentialView implements OnInit, OnDestroy {
       return;
     }
 
-    const ext = cred as PersonalItem & { unidad?: string; fechaNacimiento?: string; emision?: string; validoHasta?: string; sha256?: string };
+    const ext = cred as PersonalItem & {
+      unidad?: string;
+      fechaNacimiento?: string;
+      emision?: string;
+      validoHasta?: string;
+      sha256?: string;
+    };
     const extended: CredentialData = mapPersonalItemToCredentialData({
       ...cred,
       unidad: ext.unidad ?? 'Batallón de Infantería 7',

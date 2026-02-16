@@ -1,0 +1,40 @@
+<div class="reg-field-label">
+  <mat-icon>shield</mat-icon>
+  <span>Fuerza</span>
+</div>
+<mat-form-field appearance="outline" class="reg-field">
+  <mat-select [formControl]="forceCtrl" placeholder="Seleccione fuerza">
+    @for (f of forces; track f.value) {
+      <mat-option [value]="f.value">{{ f.label }}</mat-option>
+    }
+  </mat-select>
+  @if (forceCtrl.touched && forceCtrl.hasError('required')) {
+    <mat-error>La fuerza es requerida</mat-error>
+  }
+</mat-form-field>
+
+<div class="reg-field-label">
+  <mat-icon>sports</mat-icon>
+  <span>Disciplina o Deporte</span>
+</div>
+<mat-form-field appearance="outline" class="reg-field">
+  <input matInput [formControl]="sportCtrl" placeholder="Ej: Atletismo, Fútbol, Natación..." />
+  @if (sportCtrl.touched && sportCtrl.hasError('required')) {
+    <mat-error>La disciplina/deporte es requerida</mat-error>
+  }
+</mat-form-field>
+
+<div class="reg-field-label">
+  <mat-icon>school</mat-icon>
+  <span>Curso</span>
+</div>
+<mat-form-field appearance="outline" class="reg-field">
+  <mat-select [formControl]="courseCtrl" placeholder="Seleccione curso">
+    @for (c of courses; track c.value) {
+      <mat-option [value]="c.value">{{ c.label }}</mat-option>
+    }
+  </mat-select>
+  @if (courseCtrl.touched && courseCtrl.hasError('required')) {
+    <mat-error>El curso es requerido</mat-error>
+  }
+</mat-form-field>

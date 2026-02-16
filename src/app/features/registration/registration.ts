@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, afterNextRender, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import Swal from 'sweetalert2';
 
@@ -11,7 +11,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
+import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
+import { RegistrationSkeleton } from '../../layout/widgets/registration-skeleton/registration-skeleton';
 
 type RankOption = { value: string; label: string };
 
@@ -41,11 +43,15 @@ type RegistrationFormModel = {
     MatSelectModule,
     MatIconModule,
     MatDatepickerModule,
+    RegistrationSkeleton,
   ],
 })
 export class Registration {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly navigationService = inject(NavigationService);
+  private readonly layoutLoading = inject(LayoutLoadingService);
+
+  loading = signal(true);
 
   // Si vas a manejar foto desde template
   selectedPhoto?: File;
@@ -103,6 +109,16 @@ export class Registration {
   }
   get unitCtrl() {
     return this.registrationForm.controls.unit;
+  }
+
+  constructor() {
+    this.layoutLoading.setLoading(true);
+    afterNextRender(() => {
+      setTimeout(() => {
+        this.loading.set(false);
+        this.layoutLoading.setLoading(false);
+      }, 600);
+    });
   }
 
   onPhotoSelected(event: Event): void {

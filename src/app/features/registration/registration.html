@@ -1,3 +1,6 @@
+@if (loading()) {
+  <app-registration-skeleton />
+} @else {
 <div class="reg-layout">
   <div class="reg-overlay"></div>
 
@@ -219,3 +222,4 @@
     </mat-card>
   </div>
 </div>
+}

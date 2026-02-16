@@ -4,7 +4,7 @@ export const MENU: Record<string, INavData[]> = {
   instucion: [
     {
       name: 'Registro',
-      url: '/registration',
+      url: '/personal-registrado',
       iconComponent: { name: 'contacts_product' },
     },
   ],

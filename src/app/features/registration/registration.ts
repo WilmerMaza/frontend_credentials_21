@@ -16,6 +16,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 import { RegistrationSkeleton } from '../../layout/widgets/registration-skeleton/registration-skeleton';
 
 import { InterEscuelas } from './components/forms/inter-escuelas/inter-escuelas';
+import { Militar } from './components/forms/militar/militar';
 
 type RegistrationType = 'militar' | 'civil' | 'inter-escuelas';
 type IdType = 'cc' | 'ti' | 'ce' | 'pasaporte';
@@ -41,6 +42,7 @@ type IdTypeOption = { value: IdType; label: string };
 
     RegistrationSkeleton,
     InterEscuelas,
+    Militar
   ],
 })
 export class Registration {

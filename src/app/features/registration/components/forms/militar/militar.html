@@ -1,0 +1,85 @@
+<!--Seleccionar Fuerza-->
+<div class="reg-field-label">
+  <mat-icon>shield</mat-icon>
+  <span>Fuerza</span>
+</div>
+<mat-form-field appearance="outline" class="reg-field">
+  <mat-select [formControl]="forceMCtrl" placeholder="Seleccione fuerza">
+   <!-- @for (group of filteredCategorieGroups; track group){
+    
+   } -->
+    @for (f of forces; track f.value) {
+      <mat-option [value]="f.value">{{ f.label }}</mat-option>
+    }
+  </mat-select>
+  @if (forceMCtrl.touched && forceMCtrl.hasError('required')) {
+    <mat-error>La fuerza es requerida</mat-error>
+  }
+</mat-form-field>
+
+
+<!--Grado-->
+
+
+@if(forceMCtrl.value && forceMCtrl.value === 'ejercito')
+
+{
+  <div class="reg-field-label">
+  <mat-icon> star </mat-icon>
+  <span>Categoria</span>
+</div>
+<mat-form-field appearance="outline" class="reg-field">
+  <mat-select [formControl]="gradesCtrl" placeholder="Seleccione Grado">
+    @for (f of getCategories(forceMCtrl.value ?? ''); track f.value) {
+      <mat-option [value]="f.value">{{ f.label }}</mat-option>
+    }
+  </mat-select>
+  @if (gradesCtrl.touched && gradesCtrl.hasError('required')) {
+    <mat-error>El grado es requerida</mat-error>
+  }
+</mat-form-field>
+}
+
+@if(forceMCtrl.value && forceMCtrl.value === 'armada')
+
+{
+  <!--categoria multiseleccion-->
+<div class="reg-field-label">
+    <mat-icon>star</mat-icon>
+  <span>Categoria</span>
+</div>
+<mat-form-field appearance="outline" class="reg-field">
+  <mat-select [formControl]="categorieCtrl" placeholder="Seleccione Categoria">
+    <mat-option>-- None --</mat-option>
+    @for (group of categorieGroups; track group) {
+      <mat-optgroup [label]="group.name"
+                    [disabled]="group.disabled">
+        @for (categoria of group.categoria; track categoria) {
+          <mat-option [value]="categoria.value">{{categoria.label}}</mat-option>
+        }
+      </mat-optgroup>
+    }
+  </mat-select>
+  @if (gradesCtrl.touched && gradesCtrl.hasError('required')) {
+    <mat-error>la Categoria es requerida</mat-error>
+  }
+</mat-form-field>
+
+}
+
+
+<!--Grado-->
+<div class="reg-field-label">
+  <mat-icon> military_tech </mat-icon>
+  <span>Grado</span>
+</div>
+<mat-form-field appearance="outline" class="reg-field">
+  <mat-select [formControl]="gradesCtrl" placeholder="Seleccione Grado">
+    @for (f of getgrades(categorieCtrl.value ?? ''); track f.value) {
+      <mat-option [value]="f.value">{{ f.label }}</mat-option>
+    }
+  </mat-select>
+  @if (gradesCtrl.touched && gradesCtrl.hasError('required')) {
+    <mat-error>El grado es requerida</mat-error>
+  }
+</mat-form-field>

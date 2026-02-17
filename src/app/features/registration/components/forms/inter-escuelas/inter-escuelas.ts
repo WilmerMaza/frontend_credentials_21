@@ -6,12 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-
-export type ForceOption = {
-  value: 'armada' | 'ejercito' | 'fuerza_aerea' | 'policia_nacional';
-  label: string;
-};
-export type CourseOption = { value: '1' | '2' | '3' | '4'; label: string };
+import { CourseOption, ForceOptionInter } from '../../interface/options_interfaces';
 
 @Component({
   selector: 'app-inter-escuelas',
@@ -30,7 +25,7 @@ export type CourseOption = { value: '1' | '2' | '3' | '4'; label: string };
 export class InterEscuelas implements OnInit {
   @Input({ required: true }) group!: FormGroup;
 
-  readonly forces: ForceOption[] = [
+  readonly forces: ForceOptionInter[] = [
     { value: 'armada', label: 'Armada' },
     { value: 'ejercito', label: 'Ejército' },
     { value: 'fuerza_aerea', label: 'Fuerza Aérea' },
@@ -44,7 +39,7 @@ export class InterEscuelas implements OnInit {
     { value: '4', label: '4 año' },
   ];
 
-  forceCtrl = new FormControl<ForceOption['value'] | ''>('', { validators: [Validators.required] });
+  forceCtrl = new FormControl<ForceOptionInter['value'] | ''>('', { validators: [Validators.required] });
   sportCtrl = new FormControl('', { nonNullable: true, validators: [Validators.required] });
   courseCtrl = new FormControl<CourseOption['value'] | ''>('', {
     validators: [Validators.required],

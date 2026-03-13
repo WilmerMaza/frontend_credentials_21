@@ -3,6 +3,8 @@
    ======================================== */
 
 :host {
+  min-width: 0;
+  overflow-x: hidden;
   --pr-navy: #0a2850;
   --pr-navy-2: #0f356a;
   --pr-bg: #f9fafb;
@@ -17,11 +19,14 @@
 }
 
 .pr-container {
-  padding: 16px 20px 24px;
+  padding: 16px 10px 24px;
   max-width: 1200px;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
-  min-height: calc(100vh - 56px - 40px);
+  overflow: hidden;
+  height: calc(100vh - 56px - 40px);
+  max-height: calc(100vh - 56px - 40px);
   display: flex;
   flex-direction: column;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -30,6 +35,7 @@
 
 /* Header */
 .pr-header {
+  flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -80,6 +86,7 @@
 
 /* Metric card */
 .pr-metric-card {
+  flex-shrink: 0;
   background: var(--pr-card);
   border: 1px solid var(--pr-border);
   border-radius: 14px;
@@ -141,6 +148,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   background: var(--pr-card);
   border: 1px solid var(--pr-border);
   border-radius: 14px;
@@ -233,15 +241,19 @@
   color: #fff;
 }
 
-/* Table */
+/* Table: scroll solo en el cuerpo; footer (paginador) siempre visible abajo */
 .pr-table-wrap {
-  flex: 1;
-  overflow: auto;
+  flex: 1 1 0;
   min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pr-table {
   width: 100%;
+  min-width: 760px;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 14px;
@@ -255,7 +267,8 @@
   border-bottom: 1px solid var(--pr-border);
   font-weight: 800;
   font-size: 12px;
-  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pr-table thead th:last-child {
@@ -267,6 +280,8 @@
   border-bottom: 1px solid var(--pr-border);
   vertical-align: middle;
   color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pr-table tbody tr:hover {
@@ -296,7 +311,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 140px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pr-photo {
@@ -369,7 +385,7 @@
 .pr-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 3px;
   justify-content: flex-end;
 }
 
@@ -471,7 +487,8 @@
 @media (max-width: 1024px) {
   .pr-container {
     padding: 14px 16px 20px;
-    min-height: calc(100vh - 56px - 36px);
+    height: calc(100vh - 56px - 36px);
+    max-height: calc(100vh - 56px - 36px);
   }
   .pr-metrics {
     grid-template-columns: repeat(3, 1fr);
@@ -500,7 +517,8 @@
 @media (max-width: 768px) {
   .pr-container {
     padding: 12px 14px 16px;
-    min-height: calc(100dvh - 56px - 32px);
+    height: calc(100dvh - 56px - 32px);
+    max-height: calc(100dvh - 56px - 32px);
   }
   .pr-header {
     flex-direction: column;
@@ -574,18 +592,13 @@
   }
   .pr-table-wrap {
     overflow-x: auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-  }
-  .pr-table {
-    min-width: 600px;
   }
   .pr-table thead th,
   .pr-table tbody td {
     padding: 8px 10px;
     font-size: 13px;
-  }
-  .pr-cell-photo {
-    min-width: 120px;
   }
   .pr-photo {
     width: 32px;
@@ -610,7 +623,8 @@
 @media (max-width: 480px) {
   .pr-container {
     padding: 10px 12px 14px;
-    min-height: calc(100dvh - 56px - 28px);
+    height: calc(100dvh - 56px - 28px);
+    max-height: calc(100dvh - 56px - 28px);
   }
   .pr-metrics {
     grid-template-columns: 1fr;
@@ -625,9 +639,6 @@
   }
   .pr-metric:nth-child(odd) {
     border-right: 0;
-  }
-  .pr-table {
-    min-width: 520px;
   }
   .pr-page {
     min-width: 32px;
@@ -903,7 +914,7 @@
   border: 1px solid var(--pr-border);
   border-radius: 18px;
   box-shadow: var(--pr-shadow);
-  overflow: hidden;
+  overflow: visible; /* permite que el paginador sticky sea visible */
 }
 
 .list-head {
@@ -1085,6 +1096,7 @@
   color: #9f1239;
 }
 
+/* Paginador móvil: siempre visible y sticky al fondo al hacer scroll */
 .pager {
   border-top: 1px solid var(--pr-border);
   padding: 12px 14px;
@@ -1092,16 +1104,27 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex-shrink: 0;
+  background: var(--pr-card);
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 -4px 12px rgba(2, 6, 23, 0.06);
 }
 
 .p-btn {
-  height: 40px;
-  padding: 0 12px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
   border-radius: 14px;
   border: 1px solid var(--pr-border);
   background: #fff;
   font-weight: 900;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .p-btn:disabled {
@@ -1112,8 +1135,10 @@
 .p-mid {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .p-num {
@@ -1124,6 +1149,7 @@
   background: #fff;
   font-weight: 900;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .p-num.active {

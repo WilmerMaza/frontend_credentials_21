@@ -1,0 +1,17 @@
+/* Inter-escuelas: estilos mínimos para consistencia con formulario padre */
+
+:host {
+  display: block;
+}
+
+.reg-field-label {
+  margin: 20px 0 8px;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.reg-field {
+  width: 100%;
+}

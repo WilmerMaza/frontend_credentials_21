@@ -6,18 +6,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { PersonalRegistradoSkeleton } from '../../layout/widgets/personal-registrado-skeleton/personal-registrado-skeleton';
+import { PersonalListService } from './data/personal-list.service';
+import type { PersonalItem } from './models/personal-item.model';
 
-export interface PersonalItem {
-  id: string;
-  photoUrl?: string;
-  nombreCompleto: string;
-  sub?: string;
-  identificacion: string;
-  rango: string;
-  estado: 'activo' | 'inactivo' | 'pendiente';
-  correo: string;
-  fechaIngreso: string;
-}
+export type { PersonalItem };
 
 interface StatCard {
   label: string;
@@ -42,11 +34,17 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly layoutLoading = inject(LayoutLoadingService);
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly personalListService = inject(PersonalListService);
   private breakpointSub?: { unsubscribe: () => void };
+  private breakpointSubMedium?: { unsubscribe: () => void };
+
+  /** Lista de personal: origen único (demo + registros nuevos). */
+  private _allData = this.personalListService.listSignal;
 
   loading = signal(true);
   filtersExpanded = signal(false);
   isMobile = signal(false);
+  isMedium = signal(false);
 
   readonly searchForm = new FormGroup({
     nombre: new FormControl('', { nonNullable: true }),
@@ -54,22 +52,24 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     identificacion: new FormControl('', { nonNullable: true }),
   });
 
-  readonly statCards: StatCard[] = [
-    { label: 'Registrados', total: 214, icon: 'group' },
-    { label: 'Activos', total: 177, icon: 'check' },
-    { label: 'Inactivos', total: 29, icon: 'close' },
-    { label: 'Pend. credencial', total: 8, icon: 'chat_bubble' },
-    { label: 'Pendientes', total: 8, icon: 'schedule' },
-  ];
+  /** Métricas calculadas desde el mismo JSON que la tabla (_allData). */
+  readonly statCards = computed<StatCard[]>(() => {
+    const data = this._allData();
+    const total = data.length;
+    const activos = data.filter((r) => r.estado === 'activo').length;
+    const inactivos = data.filter((r) => r.estado === 'inactivo').length;
+    const pendientes = data.filter((r) => r.estado === 'pendiente').length;
+    return [
+      { label: 'Registrados', total, icon: 'group' },
+      { label: 'Activos', total: activos, icon: 'check' },
+      { label: 'Inactivos', total: inactivos, icon: 'close' },
+      { label: 'Pend. credencial', total: pendientes, icon: 'chat_bubble' },
+      { label: 'Pendientes', total: pendientes, icon: 'schedule' },
+    ];
+  });
 
-  pageSize = 10;
-  pageIndex = 0;
-  private readonly _pageSizeOptions = [4, 5, 10, 25, 50, 100];
-  readonly pageSizeOptions = computed(() =>
-    this.isMobile() ? [4] : this._pageSizeOptions,
-  );
+  readonly pageIndex = signal(0);
 
-  private _allData = signal<PersonalItem[]>([]);
   private _appliedFilters = signal<{ nombre: string; correo: string; identificacion: string }>({
     nombre: '',
     correo: '',
@@ -92,8 +92,9 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
 
   readonly totalRecords = computed(() => this.filteredData().length);
 
+  /** Registros por página según breakpoint: pequeño 4, mediano 8, grande 9. */
   readonly effectivePageSize = computed(() =>
-    this.isMobile() ? Math.min(this.pageSize, 4) : this.pageSize,
+    this.isMobile() ? 4 : this.isMedium() ? 8 : 9,
   );
 
   readonly totalPages = computed(() =>
@@ -103,13 +104,13 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   readonly pagedData = computed(() => {
     const data = this.filteredData();
     const size = this.effectivePageSize();
-    const start = this.pageIndex * size;
+    const start = this.pageIndex() * size;
     return data.slice(start, start + size);
   });
 
   readonly pageNumbers = computed(() => {
     const total = this.totalPages();
-    const curr = this.pageIndex + 1;
+    const curr = this.pageIndex() + 1;
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
     const pages: (number | string)[] = [];
     if (curr <= 4) {
@@ -122,89 +123,32 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     return pages;
   });
 
-  private mockData: PersonalItem[] = [
-    {
-      id: '1',
-      nombreCompleto: 'Juan Pérez',
-      sub: 'Reentreno: Juan pereza',
-      identificacion: 'MIL-2025-001234',
-      rango: 'Teniente',
-      estado: 'activo',
-      correo: 'juan.perez@fuerzasarmadas.mil',
-      fechaIngreso: '15/04/2024',
-    },
-    {
-      id: '2',
-      nombreCompleto: 'María González',
-      sub: 'Reentreno: Juan gontínez',
-      identificacion: 'MIL-2024-006789',
-      rango: 'Subteniente',
-      estado: 'activo',
-      correo: 'maria.gonzalez@fuerzasarmadas.mil',
-      fechaIngreso: '12/04/2024',
-    },
-    {
-      id: '3',
-      nombreCompleto: 'Luis Martínez',
-      sub: 'Reentreno: Luis martínez',
-      identificacion: 'MIL-2023-012345',
-      rango: 'Teniente',
-      estado: 'activo',
-      correo: 'luis.martinez@fuerzasarmadas.mil',
-      fechaIngreso: '10/04/2024',
-    },
-    {
-      id: '4',
-      nombreCompleto: 'Ana Rodríguez',
-      sub: 'Reentreno: Ana rodríguez andálz',
-      identificacion: 'MIL-2023-001678',
-      rango: 'Subteniente',
-      estado: 'activo',
-      correo: 'ana.rodriguez@fuerzasarmadas.mil',
-      fechaIngreso: '05/04/2024',
-    },
-    {
-      id: '5',
-      nombreCompleto: 'Laura Moreno',
-      sub: 'Reentreno: lencum.teregogas.ermadas',
-      identificacion: 'MIL-2026-017890',
-      rango: 'Subteniente',
-      estado: 'pendiente',
-      correo: 'laura.moreno@fuerzasarmadas.mil',
-      fechaIngreso: '28/03/2024',
-    },
-    {
-      id: '6',
-      nombreCompleto: 'Carlos Sánchez',
-      sub: 'Reentreno: Carlos sánchez',
-      identificacion: 'MIL-2025-001237',
-      rango: 'Capitán',
-      estado: 'activo',
-      correo: 'carlos.sanchez@fuerzasarmadas.mil',
-      fechaIngreso: '01/03/2024',
-    },
-  ];
-
   ngOnInit(): void {
     this.breakpointSub = this.breakpointObserver
       .observe('(max-width: 768px)')
       .subscribe((state) => {
         const mobile = state.matches;
         this.isMobile.set(mobile);
-        if (mobile && this.pageSize > 4) {
-          this.pageSize = 4;
-          this.pageIndex = Math.min(this.pageIndex, Math.max(0, this.totalPages() - 1));
+        if (mobile) {
+          this.pageIndex.set(Math.min(this.pageIndex(), Math.max(0, this.totalPages() - 1)));
         }
+      });
+    this.breakpointSubMedium = this.breakpointObserver
+      .observe('(min-width: 769px) and (max-width: 1024px)')
+      .subscribe((state) => {
+        const medium = state.matches;
+        this.isMedium.set(medium);
+        this.pageIndex.set(Math.min(this.pageIndex(), Math.max(0, this.totalPages() - 1)));
       });
   }
 
   ngOnDestroy(): void {
     this.breakpointSub?.unsubscribe();
+    this.breakpointSubMedium?.unsubscribe();
   }
 
   constructor() {
     this.layoutLoading.setLoading(true);
-    this._allData.set(this.mockData);
 
     if (typeof window !== 'undefined') {
       setTimeout(() => {
@@ -218,7 +162,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   }
 
   navigateToRegistration(): void {
-    this.router.navigate(['/registration']);
+    this.router.navigate(['/personal-registrado', 'registro']);
   }
 
   toggleFilters(): void {
@@ -227,33 +171,28 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
 
   onSearch(): void {
     this._appliedFilters.set(this.searchForm.getRawValue());
-    this.pageIndex = 0;
+    this.pageIndex.set(0);
   }
 
   onClearSearch(): void {
     this.searchForm.reset({ nombre: '', correo: '', identificacion: '' });
     this._appliedFilters.set({ nombre: '', correo: '', identificacion: '' });
-    this.pageIndex = 0;
+    this.pageIndex.set(0);
   }
 
   goToPage(page: number): void {
     if (page >= 0 && page < this.totalPages()) {
-      this.pageIndex = page;
+      this.pageIndex.set(page);
     }
-  }
-
-  onPageSizeChange(size: number | string): void {
-    const val = typeof size === 'string' ? parseInt(size, 10) : size;
-    this.pageSize = this.isMobile() ? Math.min(val, 4) : val;
-    this.pageIndex = 0;
   }
 
   getPaginationHint(): string {
     const total = this.totalRecords();
     if (total === 0) return 'Mostrando 0 registros';
     const size = this.effectivePageSize();
-    const start = this.pageIndex * size + 1;
-    const end = Math.min((this.pageIndex + 1) * size, total);
+    const idx = this.pageIndex();
+    const start = idx * size + 1;
+    const end = Math.min((idx + 1) * size, total);
     return `Mostrando ${start}–${end} de ${total} registros`;
   }
 

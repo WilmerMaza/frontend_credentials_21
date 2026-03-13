@@ -1,10 +1,11 @@
 import { Component, input } from '@angular/core';
-import { DashboardCard } from '../../../models/interface';
+import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
+import { DashboardCard } from '../../../models/interface';
 
 @Component({
   selector: 'app-buttons-dashboard',
-  imports: [],
+  imports: [MatIconModule],
   standalone: true,
   templateUrl: './buttons-dashboard.html',
   styleUrl: './buttons-dashboard.scss',

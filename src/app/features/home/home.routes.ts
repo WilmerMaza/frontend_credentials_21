@@ -9,16 +9,31 @@ export const HOME_ROUTES: Routes = [
     path: 'dashboard',
     loadComponent: () => import('../dashboard/dashboard').then((m) => m.Dashboard),
   },
-  // Personal registrado (lista) - paso previo al formulario
+  // Personal registrado (lista y formulario de registro como rutas hijas)
   {
     path: 'personal-registrado',
     loadComponent: () =>
-      import('../personal-registrado/personal-registrado').then((m) => m.PersonalRegistrado),
+      import('../personal-registrado/personal-registrado-shell').then(
+        (m) => m.PersonalRegistradoShell,
+      ),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('../personal-registrado/personal-registrado').then((m) => m.PersonalRegistrado),
+      },
+      {
+        path: 'registro',
+        loadComponent: () =>
+          import('../registration/registration').then((m) => m.Registration),
+      },
+    ],
   },
-  // Formulario de registro
+  // Redirect legacy /registration para no romper enlaces antiguos
   {
     path: 'registration',
-    loadComponent: () => import('../registration/registration').then((m) => m.Registration),
+    redirectTo: 'personal-registrado/registro',
+    pathMatch: 'full',
   },
   // Visualización de credencial (escarapela)
   {

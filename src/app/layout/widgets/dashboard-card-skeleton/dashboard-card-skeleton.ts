@@ -20,22 +20,23 @@ import { Component } from '@angular/core';
       width: 100%;
       min-width: 0;
       margin: 0;
-      border: 1px solid #e5e7eb;
+      border: none;
       background: #fff;
-      border-radius: 16px;
-      padding: 1rem;
+      border-radius: 20px;
+      padding: 1.25rem;
       height: 100%;
       min-height: 120px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       box-sizing: border-box;
+      box-shadow: 0 4px 20px rgba(12, 46, 87, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
     }
     .skeleton-top {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 0.8rem;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
     }
     .skeleton {
       background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -48,9 +49,9 @@ import { Component } from '@angular/core';
       100% { background-position: -200% 0; }
     }
     .skeleton-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
       flex-shrink: 0;
     }
     .skeleton-title { height: 1rem; width: 60%; }

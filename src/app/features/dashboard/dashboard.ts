@@ -15,11 +15,31 @@ import { DashboardCard } from '../../models/interface';
       <app-dashboard-content-skeleton />
     } @else {
       <div class="welcome-container">
-        <div class="welcome-content">
-          <h1 class="welcome-title">¡Bienvenido!</h1>
+        <div class="hero-section">
+          <div class="hero-bg-pattern"></div>
+          <div class="hero-shape hero-shape-1"></div>
+          <div class="hero-shape hero-shape-2"></div>
+          <div class="hero-wave" aria-hidden="true"></div>
+          <div class="hero-content">
+            <span class="hero-badge">Panel ENAP</span>
+            <h1
+              class="welcome-title"
+              [class.chrome-active]="chromeActive()"
+              (click)="triggerChrome()"
+              role="button"
+              tabindex="0"
+              aria-label="¡Bienvenido! Presiona para ver efecto cromado"
+              (keydown.enter)="triggerChrome()"
+              (keydown.space)="triggerChrome(); $event.preventDefault()"
+            >
+              ¡Bienvenido!
+            </h1>
+            <p class="welcome-subtitle">Registro de personal y gestión de usuarios de la Escuela Naval</p>
+            <div class="hero-decoration"></div>
+          </div>
         </div>
 
-        <!-- KPI buttons/cards -->
+        <h2 class="section-title">Accesos rápidos</h2>
         <div class="dashboard">
           @for (card of cards; track card.id) {
             <app-buttons-dashboard [button]="card"></app-buttons-dashboard>
@@ -32,7 +52,13 @@ import { DashboardCard } from '../../models/interface';
 })
 export class Dashboard {
   loading = signal(true);
+  chromeActive = signal(false);
   private layoutLoading = inject(LayoutLoadingService);
+
+  triggerChrome(): void {
+    this.chromeActive.set(true);
+    setTimeout(() => this.chromeActive.set(false), 2500);
+  }
 
   constructor(
     private route$: ActivatedRoute,
@@ -47,43 +73,24 @@ export class Dashboard {
     });
   }
 
-  // Totales de ejemplo: reemplaza por tus datos reales (API, signals, store, etc.)
   public cards: DashboardCard[] = [
     {
       id: 1,
-      title: 'Pagos',
-      total: 12,
-      subtitle: 'Procesados hoy',
-      route: '/pagos',
-      icon: '💳',
+      title: 'Registro',
+      description: 'Registrar nuevo personal militar o civil en el sistema',
+      route: '/personal-registrado/registro',
+      icon: '📝',
+      iconName: 'person_add',
       tone: 'blue',
     },
     {
       id: 2,
-      title: 'Usuarios',
-      total: 248,
-      subtitle: 'Activos',
-      route: '/usuarios',
-      icon: '👤',
+      title: 'Gestión de Usuario',
+      description: 'Administrar y consultar el personal registrado',
+      route: '/personal-registrado',
+      icon: '👥',
+      iconName: 'manage_accounts',
       tone: 'green',
-    },
-    {
-      id: 3,
-      title: 'Solicitudes',
-      total: 31,
-      subtitle: 'Pendientes',
-      route: '/solicitudes',
-      icon: '📝',
-      tone: 'orange',
-    },
-    {
-      id: 4,
-      title: 'Reportes',
-      total: 5,
-      subtitle: 'Nuevos',
-      route: '/reportes',
-      icon: '📊',
-      tone: 'purple',
     },
   ];
 }

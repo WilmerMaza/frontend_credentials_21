@@ -9,7 +9,7 @@
 
       <!-- Métricas (scroll horizontal) -->
       <section class="m-metrics">
-        @for (card of statCards; track card.label) {
+        @for (card of statCards(); track card.label) {
           <div class="metric">
             <div class="metric-ico" [class.ok]="card.icon === 'check'" [class.off]="card.icon === 'close'" [class.warn]="card.icon === 'chat_bubble' || card.icon === 'schedule'">
               <mat-icon>{{ card.icon }}</mat-icon>
@@ -140,7 +140,7 @@
 
         <!-- Paginación móvil -->
         <div class="pager">
-          <button class="p-btn" [disabled]="pageIndex === 0" (click)="goToPage(pageIndex - 1)" type="button">
+          <button class="p-btn" [disabled]="pageIndex() === 0" (click)="goToPage(pageIndex() - 1)" type="button">
             Anterior
           </button>
           <div class="p-mid">
@@ -150,7 +150,7 @@
               } @else {
                 <button
                   class="p-num"
-                  [class.active]="pageIndex === $any(p) - 1"
+                  [class.active]="pageIndex() === $any(p) - 1"
                   (click)="goToPage($any(p) - 1)"
                   type="button"
                 >
@@ -159,7 +159,7 @@
               }
             }
           </div>
-          <button class="p-btn" [disabled]="pageIndex >= totalPages() - 1" (click)="goToPage(pageIndex + 1)" type="button">
+          <button class="p-btn" [disabled]="pageIndex() >= totalPages() - 1" (click)="goToPage(pageIndex() + 1)" type="button">
             Siguiente
           </button>
         </div>
@@ -187,7 +187,7 @@
     <!-- Metrics -->
     <div class="pr-metric-card">
       <div class="pr-metrics">
-        @for (card of statCards; track card.label) {
+        @for (card of statCards(); track card.label) {
           <div class="pr-metric">
             <div class="pr-metric__ico">
               <mat-icon>{{ card.icon }}</mat-icon>
@@ -256,6 +256,15 @@
       <!-- Table -->
       <div class="pr-table-wrap">
         <table class="pr-table">
+          <colgroup>
+            <col style="width: 12%" />
+            <col style="width: 18%" />
+            <col style="width: 12%" />
+            <col style="width: 14%" />
+            <col style="width: 24%" />
+            <col style="width: 10%" />
+            <col style="width: 10%" />
+          </colgroup>
           <thead>
             <tr>
               <th>Fotografía</th>
@@ -327,8 +336,8 @@
         <div class="pr-pager">
           <button
             class="pr-page"
-            [disabled]="pageIndex === 0"
-            (click)="goToPage(pageIndex - 1)"
+            [disabled]="pageIndex() === 0"
+            (click)="goToPage(pageIndex() - 1)"
             type="button"
           >
             Anterior
@@ -339,7 +348,7 @@
             } @else {
               <button
                 class="pr-page"
-                [class.active]="pageIndex === $any(p) - 1"
+                [class.active]="pageIndex() === $any(p) - 1"
                 (click)="goToPage($any(p) - 1)"
                 type="button"
               >
@@ -349,22 +358,12 @@
           }
           <button
             class="pr-page"
-            [disabled]="pageIndex >= totalPages() - 1"
-            (click)="goToPage(pageIndex + 1)"
+            [disabled]="pageIndex() >= totalPages() - 1"
+            (click)="goToPage(pageIndex() + 1)"
             type="button"
           >
             Siguiente
           </button>
-          <select
-            class="pr-select"
-            [ngModel]="pageSize"
-            (ngModelChange)="onPageSizeChange($event)"
-            aria-label="Registros por página"
-          >
-            @for (opt of pageSizeOptions(); track opt) {
-              <option [ngValue]="opt">{{ opt }}</option>
-            }
-          </select>
         </div>
       </div>
     </div>

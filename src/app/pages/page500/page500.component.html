@@ -1,22 +1,41 @@
-<!-- <div class="bg-light min-vh-100 d-flex flex-row align-items-center">
-  <c-container>
-    <c-row class="justify-content-center">
-      <c-col md="6">
-        <span class="clearfix">
-          <h1 class="float-start display-3 me-4">500</h1>
-          <h4 class="pt-3">Houston, we have a problem!</h4>
-          <p class="text-medium-emphasis float-start">
-            The page you are looking for is temporarily unavailable.
+<div class="nf-page">
+  <!-- Header -->
+  <header class="nf-header">
+    <div class="nf-header__inner">
+      <img class="nf-header__logo" src="images/ENAP.png" alt="Escuela Naval" />
+      <div class="nf-header__text">
+        <div class="nf-header__title">ESCUELA NAVAL DE CADETES</div>
+        <div class="nf-header__subtitle">ALMIRANTE PADILLA</div>
+      </div>
+    </div>
+    <div class="nf-header__gold-line"></div>
+  </header>
+
+  <!-- Content -->
+  <main class="nf-shell">
+    <section class="nf-card" role="region" aria-label="Error interno del servidor">
+      <div class="nf-card__grid">
+        
+        <!-- Left -->
+        <div class="nf-left">
+          <div class="nf-code">500</div>
+          <h1 class="nf-title">Error Interno del Servidor</h1>
+          <p class="nf-desc">
+            Se ha producido un error inesperado. 
+            Por favor, intenta nuevamente más tarde o regresa al inicio.
           </p>
-        </span>
-        <c-input-group class="input-prepend">
-          <span cInputGroupText>
-            <svg cIcon name="cilMagnifyingGlass"></svg>
-          </span>
-          <input cFormControl placeholder="What are you looking for?" type="text" />
-          <button cButton color="info">Search</button>
-        </c-input-group>
-      </c-col>
-    </c-row>
-  </c-container>
-</div> -->
+
+          <button class="nf-btn" type="button" onclick="goHome()">
+            Regresar al Inicio
+          </button>
+        </div>
+
+        <!-- Right -->
+        <div class="nf-right" aria-hidden="true">
+          <img class="nf-ill" src="images/404.png" alt="" />
+        </div>
+
+      </div>
+    </section>
+  </main>
+</div>

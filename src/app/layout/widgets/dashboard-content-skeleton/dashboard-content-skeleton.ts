@@ -8,11 +8,17 @@ import { DashboardCardSkeleton } from '../dashboard-card-skeleton/dashboard-card
   imports: [CommonModule, DashboardCardSkeleton],
   template: `
     <div class="welcome-container" role="status" aria-label="Cargando dashboard">
-      <div class="welcome-content">
-        <div class="skeleton skeleton-title"></div>
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-subtitle"></div>
+          <div class="skeleton skeleton-decoration"></div>
+        </div>
       </div>
+      <div class="skeleton skeleton-section-title"></div>
       <div class="dashboard">
-        @for (i of [1, 2, 3, 4]; track i) {
+        @for (i of [1, 2]; track i) {
           <app-dashboard-card-skeleton />
         }
       </div>
@@ -32,30 +38,60 @@ import { DashboardCardSkeleton } from '../dashboard-card-skeleton/dashboard-card
     }
     .welcome-container {
       padding: 2rem;
-      background-color: #f9fafb;
+      min-height: 100%;
+      background: linear-gradient(180deg, #ffffff 0%, #f4f6f9 25%, #f4f6f9 100%);
     }
-    .welcome-content {
+    .hero-section {
+      position: relative;
       text-align: center;
-      max-width: 800px;
+      max-width: 900px;
       width: 100%;
-      margin: 0 auto 1.5rem auto;
-      height: 10vh;
+      margin: 0 auto 3rem auto;
+      padding: 3rem 1.5rem;
+      border-radius: 24px;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+    .skeleton-badge {
+      height: 1.5rem;
+      width: 100px;
+      margin: 0 auto 1rem;
+      border-radius: 100px;
     }
     .skeleton-title {
-      height: 3rem;
-      width: 40%;
-      margin: 0 auto 1rem;
+      height: 3.5rem;
+      width: 45%;
+      margin: 0 auto 0.75rem;
+    }
+    .skeleton-subtitle {
+      height: 1.2rem;
+      width: 60%;
+      margin: 0 auto 1.5rem;
+    }
+    .skeleton-decoration {
+      width: 80px;
+      height: 5px;
+      margin: 0 auto;
+      border-radius: 3px;
+    }
+    .skeleton-section-title {
+      height: 1.25rem;
+      width: 140px;
+      margin: 0 auto 1.25rem auto;
+      border-radius: 4px;
     }
     .dashboard {
-      max-width: 1200px;
-      margin: 1rem auto 2rem auto;
+      max-width: 1100px;
+      margin: 0 auto 2rem auto;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-auto-rows: 160px;
-      gap: 1rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 200px;
+      gap: 1.5rem;
       align-items: stretch;
     }
-    @media (max-width: 1100px) {
+    @media (max-width: 900px) {
       .dashboard {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -64,8 +100,14 @@ import { DashboardCardSkeleton } from '../dashboard-card-skeleton/dashboard-card
       .welcome-container {
         padding: 1rem;
       }
+      .hero-section {
+        padding: 2rem 1rem;
+        margin-bottom: 2rem;
+      }
       .dashboard {
         grid-template-columns: 1fr;
+        grid-auto-rows: 180px;
+        gap: 1rem;
       }
     }
   `,

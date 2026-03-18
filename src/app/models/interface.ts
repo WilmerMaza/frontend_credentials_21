@@ -31,9 +31,12 @@ export interface responseUploadMode {
 export type DashboardCard = {
   id: number;
   title: string;
-  total: number;
+  total?: number; // opcional para cards descriptivas
   subtitle?: string;
+  description?: string; // texto descriptivo en lugar de total
   route: string;
-  icon: string; // emoji/simple. Si tienes librería de íconos lo cambiamos.
+  icon: string;
+  iconName?: string;
   tone: 'blue' | 'green' | 'orange' | 'purple' | 'red';
+  featured?: boolean; // card destacada, más grande
 };

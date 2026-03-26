@@ -30,7 +30,7 @@
 </div>
 <mat-form-field appearance="outline" class="reg-field">
   <mat-select [formControl]="gradesCtrl" placeholder="Seleccione Grado">
-    @for (f of getCategories(forceMCtrl.value ?? ''); track f.value) {
+    @for (f of getCategories(forceMCtrl.value); track f.value) {
       <mat-option [value]="f.value">{{ f.label }}</mat-option>
     }
   </mat-select>

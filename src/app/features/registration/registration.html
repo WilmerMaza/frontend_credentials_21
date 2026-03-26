@@ -19,7 +19,10 @@
           >
             <span class="reg-card__icon-wrap"><mat-icon>badge</mat-icon></span>
             <span class="reg-card__title">Datos de Identidad</span>
-            <mat-icon class="reg-card__chevron" [class.reg-card__chevron--open]="identitySectionExpanded()">
+            <mat-icon
+              class="reg-card__chevron"
+              [class.reg-card__chevron--open]="identitySectionExpanded()"
+            >
               expand_more
             </mat-icon>
           </button>
@@ -67,7 +70,11 @@
                     <mat-icon>photo_library</mat-icon>
                     <span>Subir archivo</span>
                   </button>
-                  <button type="button" class="reg-photo-btn reg-photo-btn--camera" (click)="openCamera()">
+                  <button
+                    type="button"
+                    class="reg-photo-btn reg-photo-btn--camera"
+                    (click)="openCamera()"
+                  >
                     <mat-icon>camera_alt</mat-icon>
                     <span>Tomar foto</span>
                   </button>
@@ -167,6 +174,46 @@
                       }
                     </mat-form-field>
                   </div>
+
+                  <!-- Correo institucional y teléfono -->
+                  <div class="reg-field-row reg-field-row--double">
+                    <div class="reg-field-group">
+                      <div class="reg-field-label">
+                        <mat-icon>email</mat-icon>
+                        <span>Correo Institucional</span>
+                      </div>
+                      <mat-form-field appearance="outline" class="reg-field">
+                        <input
+                          matInput
+                          formControlName="institutionalEmail"
+                          placeholder="usuario@escuelanaval.edu.co"
+                          autocomplete="email"
+                          type="email"
+                        />
+                        @if (registrationForm.controls.common.controls.institutionalEmail.touched) {
+                          @if (registrationForm.controls.common.controls.institutionalEmail.hasError('required')) {
+                            <mat-error>El correo institucional es requerido</mat-error>
+                          } @else if (registrationForm.controls.common.controls.institutionalEmail.hasError('email')) {
+                            <mat-error>Ingrese un correo válido</mat-error>
+                          }
+                        }
+                      </mat-form-field>
+                    </div>
+                    <div class="reg-field-group">
+                      <div class="reg-field-label">
+                        <mat-icon>phone</mat-icon>
+                        <span>Teléfono</span>
+                      </div>
+                      <mat-form-field appearance="outline" class="reg-field">
+                        <input
+                          matInput
+                          formControlName="phone"
+                          placeholder="Ej: 3001234567"
+                          type="tel"
+                        />
+                      </mat-form-field>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -177,7 +224,12 @@
               <div class="reg-camera-modal" (click)="$event.stopPropagation()">
                 <div class="reg-camera-header">
                   <h3>Tomar foto</h3>
-                  <button type="button" class="reg-camera-close" (click)="closeCamera()" aria-label="Cerrar">
+                  <button
+                    type="button"
+                    class="reg-camera-close"
+                    (click)="closeCamera()"
+                    aria-label="Cerrar"
+                  >
                     <mat-icon>close</mat-icon>
                   </button>
                 </div>
@@ -189,7 +241,11 @@
                   <button type="button" class="reg-photo-btn" (click)="closeCamera()">
                     Cancelar
                   </button>
-                  <button type="button" class="reg-photo-btn reg-photo-btn--camera" (click)="capturePhoto()">
+                  <button
+                    type="button"
+                    class="reg-photo-btn reg-photo-btn--camera"
+                    (click)="capturePhoto()"
+                  >
                     <mat-icon>camera</mat-icon>
                     Capturar
                   </button>
@@ -209,7 +265,10 @@
           >
             <span class="reg-card__icon-wrap"><mat-icon>tune</mat-icon></span>
             <span class="reg-card__title">Detalles del Tipo de Registro</span>
-            <mat-icon class="reg-card__chevron" [class.reg-card__chevron--open]="detailsSectionExpanded()">
+            <mat-icon
+              class="reg-card__chevron"
+              [class.reg-card__chevron--open]="detailsSectionExpanded()"
+            >
               expand_more
             </mat-icon>
           </button>
@@ -234,11 +293,6 @@
                   </div>
                 }
               }
-
-              <button type="button" class="reg-next-btn">
-                Siguiente: Fuerza y Curso
-                <mat-icon>arrow_forward</mat-icon>
-              </button>
             </div>
           }
         </div>

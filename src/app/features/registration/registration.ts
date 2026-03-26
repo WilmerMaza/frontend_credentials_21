@@ -20,9 +20,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
+import { mapCredentialToPersonalItem } from '../personal-registrado/models/personal-item.model';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
-import { RegistrationService } from '../../core/services/registration.service';
+import { RegistrationService, type RegistrationPayload } from '../../core/services/registration.service';
 import { RegistrationSkeleton } from '../../layout/widgets/registration-skeleton/registration-skeleton';
 
 import { InterEscuelas } from './components/forms/inter-escuelas/inter-escuelas';
@@ -55,7 +56,7 @@ type IdTypeOption = { value: IdType; label: string };
 
     RegistrationSkeleton,
     InterEscuelas,
-    Militar
+    Militar,
   ],
 })
 export class Registration implements OnDestroy {
@@ -102,15 +103,17 @@ export class Registration implements OnDestroy {
 
   // ✅ Form: type + common + details
   readonly registrationForm = this.fb.group({
-    type: this.fb.control<RegistrationType>('inter-escuelas', {
+    type: this.fb.control<RegistrationType>('militar', {
       validators: [Validators.required],
     }),
 
     common: this.fb.group({
-      fullName: this.fb.control('', { validators: [Validators.required] }),
-      idType: this.fb.control<IdType | ''>('', { validators: [Validators.required] }),
-      idNumber: this.fb.control('', { validators: [Validators.required] }),
-      birthDate: this.fb.control<Date | null>(null, { validators: [Validators.required] }),
+      fullName:           this.fb.control('', { validators: [Validators.required] }),
+      idType:             this.fb.control<IdType | ''>('', { validators: [Validators.required] }),
+      idNumber:           this.fb.control('', { validators: [Validators.required] }),
+      birthDate:          this.fb.control<Date | null>(null, { validators: [Validators.required] }),
+      institutionalEmail: this.fb.control('', { validators: [Validators.required, Validators.email] }),
+      phone:              this.fb.control('', { validators: [] }),
     }),
 
     details: this.fb.group({}),
@@ -165,9 +168,7 @@ export class Registration implements OnDestroy {
     if (common) {
       const birthDateVal = common['birthDate'];
       const birthDate =
-        typeof birthDateVal === 'string' && birthDateVal
-          ? new Date(birthDateVal)
-          : null;
+        typeof birthDateVal === 'string' && birthDateVal ? new Date(birthDateVal) : null;
       this.registrationForm.patchValue({
         common: {
           fullName: (common['fullName'] as string) ?? '',
@@ -192,7 +193,9 @@ export class Registration implements OnDestroy {
   }
 
   async openCamera(): Promise<void> {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    );
     if (isMobile) {
       document.getElementById('reg-camera-input')?.click();
       return;
@@ -209,7 +212,9 @@ export class Registration implements OnDestroy {
     try {
       this.showCameraOverlay.set(true);
       setTimeout(async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 640, height: 480 },
+        });
         this.cameraStream = stream;
         const video = this.cameraVideoRef()?.nativeElement;
         if (video) {
@@ -259,7 +264,7 @@ export class Registration implements OnDestroy {
         this.closeCamera();
       },
       'image/jpeg',
-      0.9
+      0.9,
     );
   }
 
@@ -306,9 +311,10 @@ export class Registration implements OnDestroy {
       type: raw.type,
       common: {
         ...raw.common,
-        birthDate: birthDate != null && typeof birthDate === 'object' && 'toISOString' in birthDate
-          ? (birthDate as Date).toISOString()
-          : birthDate,
+        birthDate:
+          birthDate != null && typeof birthDate === 'object' && 'toISOString' in birthDate
+            ? (birthDate as Date).toISOString()
+            : birthDate,
       },
       details: raw.details as Record<string, unknown>,
     };
@@ -326,12 +332,14 @@ export class Registration implements OnDestroy {
 
   private clearRegistrationForm(): void {
     this.registrationForm.reset({
-      type: 'inter-escuelas',
+      type: 'militar',
       common: {
         fullName: '',
         idType: '',
         idNumber: '',
         birthDate: null,
+        institutionalEmail: '',
+        phone: '',
       },
       details: {},
     });
@@ -357,16 +365,22 @@ export class Registration implements OnDestroy {
     }
 
     const raw = this.registrationForm.getRawValue();
-    const payload = {
+    const rawDetails = raw.details as Record<string, unknown>;
+
+    // Enviamos todos los campos del formulario dinámico.
+    // El backend recibirá lo que haya disponible en este momento.
+    const payload: RegistrationPayload = {
       type: raw.type,
-      common: raw.common as Record<string, unknown>,
-      details: raw.details as Record<string, unknown>,
+      common: raw.common as RegistrationPayload['common'],
+      details: rawDetails,
     };
 
-    this.registrationService.submitRegistration(payload).subscribe({
-      next: () => {
-        const newItem = this.personalListService.payloadToPersonalItem(payload);
+    this.registrationService.submitRegistration(payload, this.selectedPhoto).subscribe({
+      next: (created) => {
+        // Usar la respuesta del API para añadir el ítem a la lista
+        const newItem = mapCredentialToPersonalItem(created);
         this.personalListService.addItem(newItem);
+
         if (typeof window !== 'undefined') {
           localStorage.removeItem(REGISTRATION_DRAFT_KEY);
         }
@@ -374,16 +388,21 @@ export class Registration implements OnDestroy {
         void Swal.fire({
           icon: 'success',
           title: 'Registro exitoso',
-          text: 'Credencial enviada exitosamente al correo',
+          text: 'Credencial creada correctamente.',
           confirmButtonColor: '#163665',
         });
         this.navigationService.navigate('/personal-registrado');
       },
-      error: () => {
+      error: (err) => {
+        // El API puede devolver message como string o string[]
+        const raw = err?.error?.message;
+        const msg = Array.isArray(raw)
+          ? raw.join('\n')
+          : (raw ?? 'No se pudo completar el registro. Intente de nuevo.');
         void Swal.fire({
           icon: 'error',
-          title: 'Error',
-          text: 'No se pudo completar el registro. Intente de nuevo.',
+          title: 'Error al registrar',
+          html: `<pre style="text-align:left;font-size:13px;white-space:pre-wrap">${msg}</pre>`,
           confirmButtonColor: '#163665',
         });
       },

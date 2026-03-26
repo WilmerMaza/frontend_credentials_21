@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -9,6 +10,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
+import { LoginService } from '../../../core/services/login.service';
 
 @Component({
   selector: 'app-login',
@@ -21,16 +25,23 @@ import { MatButtonModule } from '@angular/material/button';
     MatInputModule,
     MatIconModule,
     MatButtonModule,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
 export class Login {
   hidePassword = true;
+  isLoading = false;
+  errorMessage: string | null = null;
 
-  public form: FormGroup;
+  form: FormGroup;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private loginService: LoginService,
+    private router: Router,
+  ) {
     this.form = this.fb.group({
       identifier: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]],
@@ -40,18 +51,36 @@ export class Login {
   onSubmit(): void {
     if (this.form.invalid) return;
 
+    this.isLoading = true;
+    this.errorMessage = null;
+
     const { identifier, password } = this.form.value;
-    // TODO: llama tu AuthService aquí
-    console.log('login', { identifier, password });
+
+    this.loginService.login({ email: identifier, password }).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.router.navigate(['/']);
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.errorMessage = this.resolveError(err);
+      },
+    });
   }
 
   onForgot(): void {
-    // TODO: navega a /forgot-password
-    console.log('forgot');
+    this.router.navigate(['/forgot-password']);
   }
 
   onRegister(): void {
-    // TODO: navega a /register
-    console.log('register');
+    this.router.navigate(['/auth/register']);
+  }
+
+  private resolveError(err: any): string {
+    const status = err?.status;
+    if (status === 401) return 'Credenciales incorrectas. Verifica tu usuario y contraseña.';
+    if (status === 429) return 'Demasiados intentos. Intenta de nuevo más tarde.';
+    if (status === 0) return 'No se pudo conectar con el servidor. Revisa tu conexión.';
+    return err?.error?.message ?? 'Ocurrió un error inesperado. Intenta de nuevo.';
   }
 }

@@ -38,10 +38,11 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   private breakpointSub?: { unsubscribe: () => void };
   private breakpointSubMedium?: { unsubscribe: () => void };
 
-  /** Lista de personal: origen único (demo + registros nuevos). */
+  /** Lista de personal desde el API. */
   private _allData = this.personalListService.listSignal;
 
-  loading = signal(true);
+  readonly loading = this.personalListService.loading;
+  readonly apiError = this.personalListService.error;
   filtersExpanded = signal(false);
   isMobile = signal(false);
   isMedium = signal(false);
@@ -124,6 +125,9 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    // Cargar datos reales desde el API
+    this.personalListService.loadAll().subscribe();
+
     this.breakpointSub = this.breakpointObserver
       .observe('(max-width: 768px)')
       .subscribe((state) => {
@@ -148,17 +152,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   }
 
   constructor() {
-    this.layoutLoading.setLoading(true);
-
-    if (typeof window !== 'undefined') {
-      setTimeout(() => {
-        this.loading.set(false);
-        this.layoutLoading.setLoading(false);
-      }, 600);
-    } else {
-      this.loading.set(false);
-      this.layoutLoading.setLoading(false);
-    }
+    this.layoutLoading.setLoading(false);
   }
 
   navigateToRegistration(): void {

@@ -1,7 +1,8 @@
 import { Routes } from '@angular/router';
-import { Page404} from './pages/page404/page404';
+import { Page404 } from './pages/page404/page404';
 import { Page500Component } from './pages/page500/page500.component';
 import { Layout } from './layout/home/layout';
+import { JwtGuard } from './core/guard/JwtGuard';
 
 export const routes: Routes = [
   // Auth pública
@@ -12,7 +13,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    // canActivate: [JwtGuard],
+    canActivate: [JwtGuard],
     children: [
       {
         path: '',

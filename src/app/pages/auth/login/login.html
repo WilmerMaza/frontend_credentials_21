@@ -21,6 +21,14 @@
         <h1 class="login-title">Inicio de Sesión</h1>
         <p class="login-subtitle">Inicie sesión con su <b>identificación personal</b>.</p>
 
+        <!-- Mensaje de error de login -->
+        @if (errorMessage) {
+          <div class="login-error" role="alert">
+            <mat-icon class="login-error__icon">error_outline</mat-icon>
+            <span>{{ errorMessage }}</span>
+          </div>
+        }
+
         <form class="form ui-form" [formGroup]="form" (ngSubmit)="onSubmit()">
           <mat-form-field appearance="outline" class="full">
             <mat-icon matPrefix>mail</mat-icon>
@@ -54,8 +62,17 @@
 
           <a class="forgot" (click)="onForgot()">¿Olvidó su contraseña?</a>
 
-          <button mat-flat-button class="login-btn ui-btn-primary" type="submit" [disabled]="form.invalid">
-            Iniciar Sesión
+          <button
+            mat-flat-button
+            class="login-btn ui-btn-primary"
+            type="submit"
+            [disabled]="form.invalid || isLoading"
+          >
+            @if (isLoading) {
+              <mat-spinner diameter="20" color="accent"></mat-spinner>
+            } @else {
+              Iniciar Sesión
+            }
           </button>
 
           <div class="register">

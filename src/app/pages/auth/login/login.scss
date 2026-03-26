@@ -124,6 +124,34 @@
   opacity: 0.95;
 }
 
+/* Error block */
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff3f3;
+  border: 1px solid #fac8c8;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #c0392b;
+  font-size: 14px;
+  margin-bottom: 4px;
+
+  .login-error__icon {
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+    flex-shrink: 0;
+  }
+}
+
+/* Spinner dentro del botón */
+.login-btn {
+  mat-spinner {
+    margin: 0 auto;
+  }
+}
+
 /* Form */
 .form {
   display: grid;

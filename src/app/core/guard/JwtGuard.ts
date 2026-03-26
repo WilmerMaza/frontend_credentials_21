@@ -15,7 +15,7 @@ export const JwtGuard: CanActivateFn = async () => {
   if (auth.isAuthenticated()) return true;
 
   try {
-    await firstValueFrom(auth.loadSession()); // ← bloquea hasta que /me resuelva
+    await firstValueFrom(auth.me()); // GET /auth/me → hidrata el usuario
     return true;
   } catch {
     return router.createUrlTree(['/login']);

@@ -20,7 +20,8 @@ RUN rm -rf /etc/nginx/conf.d/*
 COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 # copiar build angular
-COPY --from=builder /app/dist/credentials /usr/share/nginx/html
+COPY --from=builder /app/dist/credentials/browser /usr/share/nginx/html
+
 
 EXPOSE 80
 

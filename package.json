@@ -1,10 +1,10 @@
 {
-  "name": "angular",
-  "version": "0.0.0",
+  "name": "credentials",
+  "version": "0.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

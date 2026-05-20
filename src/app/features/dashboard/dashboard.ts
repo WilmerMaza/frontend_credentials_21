@@ -51,7 +51,7 @@ import { DashboardCard } from '../../models/interface';
   styleUrls: ['./dashboard.scss'],
 })
 export class Dashboard {
-  loading = signal(true);
+  loading = signal(false);
   chromeActive = signal(false);
   private layoutLoading = inject(LayoutLoadingService);
 
@@ -64,13 +64,7 @@ export class Dashboard {
     private route$: ActivatedRoute,
     private router: Router,
   ) {
-    this.layoutLoading.setLoading(true);
-    afterNextRender(() => {
-      setTimeout(() => {
-        this.loading.set(false);
-        this.layoutLoading.setLoading(false);
-      }, 700);
-    });
+    this.layoutLoading.setLoading(false);
   }
 
   public cards: DashboardCard[] = [

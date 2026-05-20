@@ -16,6 +16,7 @@ export const HOME_ROUTES: Routes = [
       import('../personal-registrado/personal-registrado-shell').then(
         (m) => m.PersonalRegistradoShell,
       ),
+    data: { breadcrumb: 'Personal Registrado' },
     children: [
       {
         path: '',
@@ -26,6 +27,13 @@ export const HOME_ROUTES: Routes = [
         path: 'registro',
         loadComponent: () =>
           import('../registration/registration').then((m) => m.Registration),
+        data: { breadcrumb: 'Registro de Personal' },
+      },
+      // Visualización de credencial (escarapela)
+      {
+        path: 'credential/:id',
+        loadComponent: () =>
+          import('../credential-view/credential-view').then((m) => m.CredentialView),
       },
     ],
   },
@@ -35,10 +43,5 @@ export const HOME_ROUTES: Routes = [
     redirectTo: 'personal-registrado/registro',
     pathMatch: 'full',
   },
-  // Visualización de credencial (escarapela)
-  {
-    path: 'credential/:id',
-    loadComponent: () =>
-      import('../credential-view/credential-view').then((m) => m.CredentialView),
-  },
+ 
 ];

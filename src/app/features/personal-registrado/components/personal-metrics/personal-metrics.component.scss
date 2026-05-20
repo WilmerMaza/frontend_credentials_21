@@ -1,0 +1,194 @@
+:host {
+  --pr-navy: #0a2850;
+  --pr-navy-2: #0f356a;
+  --pr-bg: #f9fafb;
+  --pr-card: #ffffff;
+  --pr-text: #0f172a;
+  --pr-muted: #64748b;
+  --pr-border: #e2e8f0;
+  --pr-shadow-soft: 0 6px 18px rgba(2, 6, 23, 0.06);
+}
+
+/* Metric card desktop */
+.pr-metric-card {
+  flex-shrink: 0;
+  background: var(--pr-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.pr-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+}
+
+.pr-metric {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--pr-border);
+  min-width: 0;
+}
+
+.pr-metric:last-child {
+  border-right: 0;
+}
+
+.pr-metric__ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--pr-border);
+  background: #f8fafc;
+}
+
+.pr-metric__ico mat-icon {
+  color: var(--pr-navy);
+}
+
+.pr-metric__val {
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.1;
+  color: var(--pr-text);
+}
+
+.pr-metric__lab {
+  color: var(--pr-muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Metric card mobile */
+.m-metrics {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.metric {
+  min-width: 170px;
+  background: var(--pr-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 18px;
+  box-shadow: var(--pr-shadow-soft);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  scroll-snap-align: start;
+}
+
+.metric-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  border: 1px solid var(--pr-border);
+  background: #f8fafc;
+  display: grid;
+  place-items: center;
+}
+
+.metric-ico mat-icon {
+  color: var(--pr-navy);
+}
+
+.metric-ico.ok {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.metric-ico.off {
+  background: #f1f5f9;
+}
+
+.metric-ico.warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.metric-val {
+  font-weight: 900;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.metric-lab {
+  color: var(--pr-muted);
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Responsive Metric Rules */
+@media (max-width: 1024px) {
+  .pr-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .pr-metric {
+    border-right: 0;
+    border-bottom: 1px solid var(--pr-border);
+    padding: 8px 10px;
+  }
+  .pr-metric:nth-child(3n) {
+    border-right: 0;
+  }
+  .pr-metric:nth-child(3n + 1),
+  .pr-metric:nth-child(3n + 2) {
+    border-right: 1px solid var(--pr-border);
+  }
+  .pr-metric:nth-last-child(-n + 3) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .pr-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pr-metric {
+    border-right: 0;
+    border-bottom: 1px solid var(--pr-border);
+    padding: 8px;
+  }
+  .pr-metric:nth-child(odd) {
+    border-right: 1px solid var(--pr-border);
+  }
+  .pr-metric:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+  .pr-metric__ico {
+    width: 32px;
+    height: 32px;
+  }
+  .pr-metric__val {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pr-metrics {
+    grid-template-columns: 1fr;
+  }
+  .pr-metric {
+    border-right: 0;
+    border-bottom: 1px solid var(--pr-border);
+    padding: 10px;
+  }
+  .pr-metric:last-child {
+    border-bottom: 0;
+  }
+  .pr-metric:nth-child(odd) {
+    border-right: 0;
+  }
+}

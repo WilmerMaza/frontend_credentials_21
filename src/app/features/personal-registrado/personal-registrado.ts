@@ -3,11 +3,19 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
-import { PersonalRegistradoSkeleton } from '../../layout/widgets/personal-registrado-skeleton/personal-registrado-skeleton';
 import { PersonalListService } from './data/personal-list.service';
+import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import type { PersonalItem } from './models/personal-item.model';
+import { getPhotoUrl } from '../../shared/utils/url.utils';
+
+// Import subcomponents
+import { PersonalMetricsComponent } from './components/personal-metrics/personal-metrics.component';
+import { PersonalSearchComponent } from './components/personal-search/personal-search.component';
+import { PersonalListMobileComponent } from './components/personal-list-mobile/personal-list-mobile.component';
+import { PersonalTableDesktopComponent } from './components/personal-table-desktop/personal-table-desktop.component';
 
 export type { PersonalItem };
 
@@ -27,7 +35,12 @@ interface StatCard {
     ReactiveFormsModule,
     FormsModule,
     MatIconModule,
-    PersonalRegistradoSkeleton,
+    BreadcrumbComponent,
+    MatTooltipModule,
+    PersonalMetricsComponent,
+    PersonalSearchComponent,
+    PersonalListMobileComponent,
+    PersonalTableDesktopComponent,
   ],
 })
 export class PersonalRegistrado implements OnInit, OnDestroy {
@@ -37,11 +50,13 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   private readonly personalListService = inject(PersonalListService);
   private breakpointSub?: { unsubscribe: () => void };
   private breakpointSubMedium?: { unsubscribe: () => void };
+  public readonly getPhotoUrl = getPhotoUrl;
 
   /** Lista de personal desde el API. */
   private _allData = this.personalListService.listSignal;
 
   readonly loading = this.personalListService.loading;
+  readonly syncing = this.personalListService.syncing;
   readonly apiError = this.personalListService.error;
   filtersExpanded = signal(false);
   isMobile = signal(false);
@@ -195,7 +210,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   }
 
   onView(item: PersonalItem): void {
-    this.router.navigate(['/credential', item.id], {
+    this.router.navigate(['/personal-registrado', 'credential', item.id], {
       state: { credential: item },
     });
   }

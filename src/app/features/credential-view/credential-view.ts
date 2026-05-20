@@ -20,6 +20,8 @@ import {
 } from './credential-view-pdf.component';
 import type { PersonalItem } from '../personal-registrado/personal-registrado';
 import type { CredentialData } from './credential-data.types';
+import { getPhotoUrl } from '../../shared/utils/url.utils';
+import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
 const DEFAULT_PHOTO = 'https://i.imgur.com/8Km9tLL.png';
@@ -125,7 +127,7 @@ function deriveValidoHasta(fechaIngreso?: string): string {
   standalone: true,
   templateUrl: './credential-view.html',
   styleUrls: ['./credential-view.scss'],
-  imports: [CommonModule, MatIconModule, CredentialViewPdfComponent],
+  imports: [CommonModule, MatIconModule, CredentialViewPdfComponent, BreadcrumbComponent],
 })
 export class CredentialView implements OnInit, OnDestroy {
   @ViewChild('credentialCardDesktop') credentialCardDesktop?: ElementRef<HTMLElement>;
@@ -138,6 +140,11 @@ export class CredentialView implements OnInit, OnDestroy {
 
   credential = signal<CredentialData | null>(null);
   isMobile = signal(false);
+
+  readonly breadcrumbItems = [
+    { label: 'Personal Registrado', url: '/personal-registrado' },
+    { label: 'Visualización de Credencial' }
+  ];
 
   readonly logoUrl = computed(() => {
     const c = this.credential();
@@ -160,7 +167,7 @@ export class CredentialView implements OnInit, OnDestroy {
 
   readonly photoUrl = computed(() => {
     const c = this.credential();
-    return c?.persona?.fotoUrl || DEFAULT_PHOTO;
+    return c?.persona?.fotoUrl ? getPhotoUrl(c.persona.fotoUrl) : DEFAULT_PHOTO;
   });
 
   readonly pdfData = computed((): CredentialPdfData | null => {
@@ -208,7 +215,7 @@ export class CredentialView implements OnInit, OnDestroy {
     this.credential.set(extended);
 
     this.breakpointSub = this.breakpointObserver
-      .observe('(max-width: 768px)')
+      .observe('(max-width: 992px)')
       .subscribe((s) => this.isMobile.set(s.matches));
   }
 
@@ -273,7 +280,7 @@ export class CredentialView implements OnInit, OnDestroy {
     // Placeholder: implementar compartir
   }
 
-  onSendToMobile(): void {
-    // Placeholder: implementar enviar al móvil
-  }
+  // onSendToMobile(): void {
+  //   // Placeholder: implementar enviar al móvil
+  // }
 }

@@ -1,6 +1,8 @@
+import { HttpContext } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { EnapApi } from '../../../core/services/enap.api';
+import { BYPASS_SPINNER } from '../../../core/interceptors/loading.interceptor';
 import type { RegistrationPayload } from '../../../core/services/registration.service';
 import {
   type CredentialApiResponse,
@@ -12,37 +14,78 @@ import {
 export class PersonalListService {
   private readonly _list = signal<PersonalItem[]>([]);
   private readonly _loading = signal<boolean>(false);
+  private readonly _syncing = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
+  private readonly CACHE_KEY = 'enap-personal-cache';
 
   /** Señales públicas de solo lectura */
   readonly listSignal  = this._list.asReadonly();
   readonly loading     = this._loading.asReadonly();
+  readonly syncing     = this._syncing.asReadonly();
   readonly error       = this._error.asReadonly();
 
-  constructor(private enap: EnapApi) {}
+  constructor(private enap: EnapApi) {
+    // Restaurar caché al inicializar
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(this.CACHE_KEY);
+        if (cached) {
+          this._list.set(JSON.parse(cached));
+        }
+      } catch (e) {
+        console.error('Error restaurando caché:', e);
+      }
+    }
+  }
 
   /**
    * GET /credentials
    * Carga todos los registros desde el API y los mapea al modelo interno.
+   * Utiliza la estrategia Stale-While-Revalidate con caché local y actualización en segundo plano.
    */
   loadAll(): Observable<CredentialApiResponse[]> {
-    this._loading.set(true);
+    const hasCache = this._list().length > 0;
+
+    // Solo mostramos el esqueleto de carga interno si no hay nada en el caché.
+    if (!hasCache) {
+      this._loading.set(true);
+    } else {
+      this._syncing.set(true);
+    }
     this._error.set(null);
 
-    return this.enap.get<CredentialApiResponse[]>('/credentials').pipe(
+    const context = new HttpContext().set(BYPASS_SPINNER, true);
+
+    return this.enap.get<CredentialApiResponse[]>('/credentials', undefined, context).pipe(
       tap({
         next: (data) => {
-          this._list.set(data.map(mapCredentialToPersonalItem));
+          const items = data.map(mapCredentialToPersonalItem);
+          this._list.set(items);
+
+          // Guardar en caché local
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(this.CACHE_KEY, JSON.stringify(items));
+            } catch (e) {
+              console.error('Error guardando en caché:', e);
+            }
+          }
+
           this._loading.set(false);
+          this._syncing.set(false);
         },
         error: (err) => {
           console.error('Error cargando credenciales:', err);
-          this._error.set('No se pudieron cargar los registros. Intenta de nuevo.');
+          if (!hasCache) {
+            this._error.set('No se pudieron cargar los registros. Intenta de nuevo.');
+          }
           this._loading.set(false);
+          this._syncing.set(false);
         },
       })
     );
   }
+
 
   /** Añade un ítem en memoria (después de un registro exitoso). */
   addItem(item: PersonalItem): void {

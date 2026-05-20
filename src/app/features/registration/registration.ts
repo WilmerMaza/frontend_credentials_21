@@ -21,10 +21,10 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
 import { mapCredentialToPersonalItem } from '../personal-registrado/models/personal-item.model';
+import { RegistrationService, type RegistrationPayload } from '../../core/services/registration.service';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
-import { RegistrationService, type RegistrationPayload } from '../../core/services/registration.service';
-import { RegistrationSkeleton } from '../../layout/widgets/registration-skeleton/registration-skeleton';
+import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 
 import { InterEscuelas } from './components/forms/inter-escuelas/inter-escuelas';
 import { Militar } from './components/forms/militar/militar';
@@ -54,7 +54,7 @@ type IdTypeOption = { value: IdType; label: string };
     MatIconModule,
     MatDatepickerModule,
 
-    RegistrationSkeleton,
+    BreadcrumbComponent,
     InterEscuelas,
     Militar,
   ],
@@ -77,7 +77,7 @@ export class Registration implements OnDestroy {
     }
   }
 
-  loading = signal(true);
+  loading = signal(false);
   selectedPhoto?: File;
   photoPreviewUrl = signal<string | null>(null);
   identitySectionExpanded = signal(true);
@@ -143,14 +143,8 @@ export class Registration implements OnDestroy {
   }
 
   constructor() {
-    this.layoutLoading.setLoading(true);
-    afterNextRender(() => {
-      setTimeout(() => {
-        this.loading.set(false);
-        this.layoutLoading.setLoading(false);
-        this.restoreDraftIfExists();
-      }, 600);
-    });
+    this.layoutLoading.setLoading(false);
+    this.restoreDraftIfExists();
   }
 
   private restoreDraftIfExists(): void {

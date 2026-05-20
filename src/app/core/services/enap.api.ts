@@ -1,4 +1,4 @@
-import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { catchError, Observable, throwError } from 'rxjs';
@@ -14,9 +14,9 @@ export class EnapApi {
   constructor(private http: HttpClient) {}
 
   /** GET genérico que acepta parámetros HTTP */
-  get<T>(endpoint: string, params?: HttpParams): Observable<T> {
+  get<T>(endpoint: string, params?: HttpParams, context?: HttpContext): Observable<T> {
     return this.http
-      .get<T>(`${this.baseUrl}${endpoint}`, { params, withCredentials: true })
+      .get<T>(`${this.baseUrl}${endpoint}`, { params, context, withCredentials: true })
       .pipe(catchError(this.handleError));
   }
 

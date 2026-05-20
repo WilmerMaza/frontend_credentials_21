@@ -22,13 +22,13 @@ $accent: #1e5f74;
   display: flex;
   flex-direction: column;
   padding: 32px 28px 120px;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  // background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .reg-wrap {
   position: relative;
   z-index: 1;
-  width: min(880px, 100%);
+  width: min(1280px, 100%); // Aumentado para ocupar mejor el espacio
   margin: 0 auto;
   flex: 1;
   padding-bottom: 24px;
@@ -41,7 +41,7 @@ $accent: #1e5f74;
 
 .reg-heading__title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 2.25rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: $navy-warm;
@@ -83,7 +83,7 @@ $accent: #1e5f74;
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 24px;
+  padding: 20px 32px;
   border: 0;
   background: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
   cursor: pointer;
@@ -137,8 +137,8 @@ $accent: #1e5f74;
   color: $navy;
 }
 
-.reg-card__body {
-  padding: 24px 28px 28px;
+.reg-card__body {  
+padding: 32px 48px 40px;
   background: #ffffff;
 }
 
@@ -146,7 +146,7 @@ $accent: #1e5f74;
 .reg-identity-grid {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 28px;
+  gap: 48px;
   align-items: start;
 }
 
@@ -365,27 +365,24 @@ $accent: #1e5f74;
 
 /* Campos - espaciado reducido */
 .reg-identity-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); // 2 columnas para aprovechar el ancho
+  gap: 20px 32px;
   min-width: 0;
 }
 
 .reg-field-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  grid-column: span 2; // Por defecto ocupan todo el ancho de la fila
+  display: grid;
+  gap: 20px 32px;
 
   &--double {
-    display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    grid-column: span 2;
   }
 
   &--full {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    grid-column: span 2;
   }
 }
 

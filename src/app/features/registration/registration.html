@@ -26,26 +26,28 @@
             </mat-icon>
           </button>
 
+          <!-- Siempre en el DOM para que Tomar foto funcione aunque la sección esté colapsada -->
+          <input
+            #fileInput
+            id="reg-file-input"
+            type="file"
+            accept="image/png,image/jpeg"
+            hidden
+            (change)="onPhotoSelected($event)"
+          />
+          <input
+            #cameraInput
+            id="reg-camera-input"
+            type="file"
+            accept="image/*"
+            capture="user"
+            hidden
+            (change)="onPhotoSelected($event)"
+          />
+
           @if (identitySectionExpanded()) {
             <div class="reg-card__body reg-identity-grid">
               <div class="reg-identity-photo">
-                <input
-                  #fileInput
-                  id="reg-file-input"
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  hidden
-                  (change)="onPhotoSelected($event)"
-                />
-                <input
-                  #cameraInput
-                  id="reg-camera-input"
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  hidden
-                  (change)="onPhotoSelected($event)"
-                />
                 <div
                   class="reg-photo-preview"
                   [class.reg-photo-preview--empty]="!photoPreviewUrl()"
@@ -60,7 +62,7 @@
                   } @else {
                     <div class="reg-photo-placeholder">
                       <mat-icon>face</mat-icon>
-                      <span>Foto para credencial</span>
+                      <span>Foto para credencial *</span>
                     </div>
                   }
                 </div>
@@ -97,7 +99,7 @@
                     </mat-form-field>
                   </div>
                   <div class="reg-field-group" formGroupName="common">
-                    <div class="reg-field-label"><span>Nombre Completo</span></div>
+                    <div class="reg-field-label"><span>Nombre Completo *</span></div>
                     <mat-form-field appearance="outline" class="reg-field">
                       <input
                         matInput
@@ -137,7 +139,7 @@
                     </div>
                     <div class="reg-field-group">
                       <div class="reg-field-label">
-                        <span>Número de Identificación</span>
+                        <span>Número de Identificación *</span>
                       </div>
                       <mat-form-field appearance="outline" class="reg-field">
                         <input matInput formControlName="idNumber" placeholder="Ej: 1234567890" />
@@ -154,7 +156,7 @@
                   <div class="reg-field-row reg-field-row--full">
                     <div class="reg-field-label">
                       <mat-icon>calendar_month</mat-icon>
-                      <span>Fecha de Nacimiento</span>
+                      <span>Fecha de Nacimiento *</span>
                     </div>
                     <mat-form-field appearance="outline" class="reg-field reg-field--full">
                       <input
@@ -179,7 +181,7 @@
                     <div class="reg-field-group">
                       <div class="reg-field-label">
                         <mat-icon>email</mat-icon>
-                        <span>Correo Institucional</span>
+                        <span>Correo Institucional *</span>
                       </div>
                       <mat-form-field appearance="outline" class="reg-field">
                         <input
@@ -313,10 +315,10 @@
           type="button"
           class="reg-btn reg-btn--primary ui-btn-primary"
           (click)="onSubmit()"
-          [disabled]="registrationForm.invalid"
+          [disabled]="registrationForm.invalid || submitting()"
         >
-          <mat-icon>check_circle</mat-icon>
-          Finalizar Registro
+          <mat-icon>{{ submitting() ? 'hourglass_empty' : 'check_circle' }}</mat-icon>
+          {{ submitting() ? 'Procesando...' : 'Finalizar Registro' }}
         </button>
       </div>
     </div>

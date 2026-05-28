@@ -19,6 +19,10 @@
         (register)="navigateToRegistration()"
       ></app-personal-search>
 
+      @if (apiError()) {
+        <div class="pr-api-error">{{ apiError() }}</div>
+      }
+
       <!-- Lista móvil con registros y paginación -->
       <app-personal-list-mobile
         [loading]="loading()"
@@ -70,6 +74,10 @@
         (search)="onSearch()"
         (clearSearch)="onClearSearch()"
       ></app-personal-search>
+
+      @if (apiError()) {
+        <div class="pr-api-error">{{ apiError() }}</div>
+      }
 
       <!-- Tabla Desktop con registros y paginación -->
       <app-personal-table-desktop

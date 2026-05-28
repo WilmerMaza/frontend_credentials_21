@@ -1,6 +1,7 @@
 /**
- * Estructura de credencial militar según el formato oficial.
- * Soporta org, doc, persona, militar, contacto, verificacion, vigencia.
+ * Estructura de credencial digital según el tipo de registro.
+ * Mantiene datos comunes y expone campos dinámicos para no forzar
+ * registros civiles o inter-escuelas dentro de una forma militar.
  */
 export interface CredentialOrg {
   nombre: string;
@@ -18,22 +19,25 @@ export interface CredentialDoc {
 export interface CredentialPersona {
   nombreCompleto: string;
   identificacion: string;
-  fechaNacimiento: string;
+  fechaNacimiento?: string;
   tipoSangre?: string;
   fotoUrl?: string;
 }
 
-export interface CredentialMilitar {
-  rango: string;
-  unidad: string;
-  fechaIngreso: string;
-  aniosServicio?: number;
-  especialidad?: string;
-  estado: string;
+export interface CredentialTypeInfo {
+  codigo: string;
+  nombre: string;
+  variante: 'militar' | 'inter-escuelas' | 'civil';
+}
+
+export interface CredentialField {
+  label: string;
+  value: string;
 }
 
 export interface CredentialContacto {
   correo: string;
+  telefono?: string;
 }
 
 export interface CredentialVerificacion {
@@ -51,7 +55,11 @@ export interface CredentialData {
   org: CredentialOrg;
   doc: CredentialDoc;
   persona: CredentialPersona;
-  militar: CredentialMilitar;
+  tipoRegistro: CredentialTypeInfo;
+  resumen: string;
+  estado: string;
+  camposPrincipales: CredentialField[];
+  camposSecundarios: CredentialField[];
   contacto: CredentialContacto;
   verificacion: CredentialVerificacion;
   vigencia: CredentialVigencia;

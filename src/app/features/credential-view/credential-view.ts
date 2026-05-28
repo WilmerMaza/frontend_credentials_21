@@ -11,116 +11,28 @@ import {
   ElementRef,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { Router } from '@angular/router';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import Swal from 'sweetalert2';
 import {
   CredentialViewPdfComponent,
   type CredentialPdfData,
 } from './credential-view-pdf.component';
-import type { PersonalItem } from '../personal-registrado/personal-registrado';
+import { PersonalListService } from '../personal-registrado/data/personal-list.service';
+import type { PersonalItem } from '../personal-registrado/models/personal-item.model';
 import type { CredentialData } from './credential-data.types';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
+import {
+  deriveValidoHasta,
+  mapPersonalItemToCredentialData,
+} from './credential-mapper';
+import { CredentialPdfService } from '../../core/services/credential-pdf.service';
+import { MailService } from '../../core/services/mail.service';
+import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
 const DEFAULT_PHOTO = 'https://i.imgur.com/8Km9tLL.png';
-
-function mapPersonalItemToCredentialData(
-  item: PersonalItem & {
-    unidad?: string;
-    fechaNacimiento?: string;
-    emision?: string;
-    validoHasta?: string;
-    sha256?: string;
-  },
-): CredentialData {
-  const emision = item.emision ?? item.fechaIngreso ?? '20/11/2025';
-  const validoHasta = item.validoHasta ?? deriveValidoHasta(item.fechaIngreso);
-  const anios = item.fechaIngreso ? calcAniosServicio(item.fechaIngreso) : 0;
-  const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}` : '';
-
-  return {
-    org: {
-      nombre: 'FUERZAS ARMADAS',
-      pais: 'República de Colombia',
-      dependencia: 'Comando General – Departamento de Recursos Humanos',
-      logoUrl: DEFAULT_LOGO,
-    },
-    doc: {
-      numeroOficial: item.identificacion,
-      titulo: 'CREDENCIAL DE IDENTIFICACIÓN',
-      subtitulo: 'Documento Oficial Certificado',
-    },
-    persona: {
-      nombreCompleto: item.nombreCompleto,
-      identificacion: item.identificacion,
-      fechaNacimiento: item.fechaNacimiento ?? '1990-03-15',
-      tipoSangre: 'O+',
-      fotoUrl: item.photoUrl,
-    },
-    militar: {
-      rango: item.rango,
-      unidad: item.unidad ?? 'Batallón de Infantería 7',
-      fechaIngreso: item.fechaIngreso,
-      aniosServicio: anios,
-      especialidad: 'Infantería',
-      estado: (item.estado ?? 'activo').toUpperCase(),
-    },
-    contacto: {
-      correo: item.correo,
-    },
-    verificacion: {
-      qrData: `${baseUrl}/verify/${encodeURIComponent(item.identificacion)}`,
-      sha256: item.sha256 ?? 'A3F7C92E...4D8B92E1',
-      verificado: true,
-    },
-    vigencia: {
-      emision,
-      validoHasta,
-    },
-  };
-}
-
-function calcAniosServicio(fechaIngreso: string): number {
-  try {
-    const parts = fechaIngreso.split(/[/-]/).map(Number);
-    if (parts.length < 3) return 0;
-    let d: number, m: number, y: number;
-    if (parts[0]! > 31) {
-      [y, m, d] = [parts[0]!, parts[1]! || 1, parts[2]! || 1];
-    } else {
-      [d, m, y] = [parts[0]! || 1, parts[1]! || 1, parts[2]!];
-    }
-    const ingreso = new Date(y, m - 1, d);
-    const hoy = new Date();
-    return Math.max(
-      0,
-      Math.floor((hoy.getTime() - ingreso.getTime()) / (365.25 * 24 * 60 * 60 * 1000)),
-    );
-  } catch {
-    return 0;
-  }
-}
-
-function deriveValidoHasta(fechaIngreso?: string): string {
-  if (!fechaIngreso) return '20/11/2030';
-  try {
-    const parts = fechaIngreso.split(/[/-]/).map(Number);
-    if (parts.length < 3) return '20/11/2030';
-    let d: number, m: number, y: number;
-    if (parts[0]! > 31) {
-      [y, m, d] = [parts[0]!, parts[1]! || 1, parts[2]! || 1];
-    } else {
-      [d, m, y] = [parts[0]! || 1, parts[1]! || 1, parts[2]!];
-    }
-    const date = new Date(y, m - 1, d);
-    date.setFullYear(date.getFullYear() + 5);
-    return date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  } catch {
-    return '20/11/2030';
-  }
-}
 
 @Component({
   selector: 'app-credential-view',
@@ -135,15 +47,22 @@ export class CredentialView implements OnInit, OnDestroy {
   @ViewChild('pdfTemplate') pdfTemplate?: ElementRef<HTMLElement>;
 
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly personalListService = inject(PersonalListService);
+  private readonly credentialPdfService = inject(CredentialPdfService);
+  private readonly mailService = inject(MailService);
   private breakpointSub?: { unsubscribe: () => void };
+  private detailLoadSub?: { unsubscribe: () => void };
 
   credential = signal<CredentialData | null>(null);
   isMobile = signal(false);
+  readonly pdfDownloading = signal(false);
+  readonly sharing = signal(false);
 
   readonly breadcrumbItems = [
     { label: 'Personal Registrado', url: '/personal-registrado' },
-    { label: 'Visualización de Credencial' }
+    { label: 'Visualización de Credencial' },
   ];
 
   readonly logoUrl = computed(() => {
@@ -177,7 +96,11 @@ export class CredentialView implements OnInit, OnDestroy {
       org: c.org,
       doc: c.doc,
       persona: c.persona,
-      militar: c.militar,
+      tipoRegistro: c.tipoRegistro,
+      resumen: c.resumen,
+      estado: c.estado,
+      camposPrincipales: c.camposPrincipales,
+      camposSecundarios: c.camposSecundarios,
       contacto: c.contacto,
       verificacion: c.verificacion,
       vigencia: c.vigencia,
@@ -188,17 +111,38 @@ export class CredentialView implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const state = history.state as
-      | { credential?: PersonalItem & { unidad?: string; fechaNacimiento?: string } }
+      | { credential?: PersonalItem & { fechaNacimiento?: string } }
       | undefined;
     const cred = state?.credential;
+    const routeId = this.route.snapshot.paramMap.get('id');
 
-    if (!cred) {
+    this.breakpointSub = this.breakpointObserver
+      .observe('(max-width: 992px)')
+      .subscribe((s) => this.isMobile.set(s.matches));
+
+    if (cred) {
+      this.setCredential(cred);
+    }
+
+    const credentialId = routeId ?? cred?.id;
+    if (!credentialId) {
       this.router.navigate(['/personal-registrado']);
       return;
     }
 
+    this.detailLoadSub = this.personalListService.getById(credentialId).subscribe({
+      next: (credential) => this.setCredential(credential),
+      error: (err) => {
+        console.error('Error cargando detalle de credencial:', err);
+        if (!cred) {
+          this.router.navigate(['/personal-registrado']);
+        }
+      },
+    });
+  }
+
+  private setCredential(cred: PersonalItem & { fechaNacimiento?: string }): void {
     const ext = cred as PersonalItem & {
-      unidad?: string;
       fechaNacimiento?: string;
       emision?: string;
       validoHasta?: string;
@@ -206,81 +150,114 @@ export class CredentialView implements OnInit, OnDestroy {
     };
     const extended: CredentialData = mapPersonalItemToCredentialData({
       ...cred,
-      unidad: ext.unidad ?? 'Batallón de Infantería 7',
-      fechaNacimiento: ext.fechaNacimiento ?? '15/03/1990',
+      fechaNacimiento: ext.fechaNacimiento,
       emision: ext.emision ?? cred.fechaIngreso ?? '20/11/2025',
       validoHasta: ext.validoHasta ?? deriveValidoHasta(cred.fechaIngreso),
       sha256: ext.sha256 ?? 'A3F7C92E...4D8B92E1',
     });
     this.credential.set(extended);
-
-    this.breakpointSub = this.breakpointObserver
-      .observe('(max-width: 992px)')
-      .subscribe((s) => this.isMobile.set(s.matches));
   }
 
   ngOnDestroy(): void {
     this.breakpointSub?.unsubscribe();
+    this.detailLoadSub?.unsubscribe();
   }
 
   goBack(): void {
     this.router.navigate(['/personal-registrado']);
   }
 
-  async onDownloadPdf(): Promise<void> {
+  private getPdfElement(): HTMLElement | null {
     const wrapper = this.pdfTemplate?.nativeElement;
-    const el = wrapper?.querySelector('.pdf-doc') as HTMLElement;
+    return (wrapper?.querySelector('.pdf-card') ?? wrapper?.querySelector('.pdf-doc')) as HTMLElement | null;
+  }
+
+  async onDownloadPdf(): Promise<void> {
+    if (this.pdfDownloading()) return;
+
+    const el = this.getPdfElement();
     if (!el) return;
 
+    this.pdfDownloading.set(true);
     try {
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        onclone: (_doc, cloneEl) => {
-          cloneEl.style.opacity = '1';
-          const wrapper = cloneEl.parentElement;
-          if (wrapper) {
-            wrapper.style.left = '0';
-            wrapper.style.opacity = '1';
-          }
-        },
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
-
-      if (imgHeight > pageHeight) {
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, pageHeight);
-      } else {
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      }
-
-      const c = this.credential();
-      const fileName = c
-        ? `credencial-${c.persona.nombreCompleto?.replace(/\s+/g, '-') || c.persona.identificacion}.pdf`
+      const blob = await this.credentialPdfService.generateBlobFromElement(el);
+      const data = this.pdfData();
+      const fileName = data
+        ? this.credentialPdfService.buildFileName(data)
         : 'credencial-militar.pdf';
-      pdf.save(fileName);
+      this.credentialPdfService.downloadBlob(blob, fileName);
     } catch (err) {
       console.error('Error al generar PDF:', err);
+      void Swal.fire({
+        icon: 'error',
+        title: 'Error al generar PDF',
+        text: 'No se pudo generar el archivo. Intente de nuevo.',
+        confirmButtonColor: '#163665',
+      });
+    } finally {
+      this.pdfDownloading.set(false);
     }
   }
 
-  onShare(): void {
-    // Placeholder: implementar compartir
-  }
+  async onShare(): Promise<void> {
+    if (this.sharing() || this.pdfDownloading()) return;
 
-  // onSendToMobile(): void {
-  //   // Placeholder: implementar enviar al móvil
-  // }
+    const c = this.credential();
+    const email = c?.contacto?.correo?.trim();
+    if (!email) {
+      void Swal.fire({
+        icon: 'error',
+        title: 'Correo no disponible',
+        text: 'Esta credencial no tiene un correo institucional registrado.',
+        confirmButtonColor: '#163665',
+      });
+      return;
+    }
+
+    const el = this.getPdfElement();
+    if (!el) {
+      void Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo preparar la credencial para enviar.',
+        confirmButtonColor: '#163665',
+      });
+      return;
+    }
+
+    this.sharing.set(true);
+    void Swal.fire({
+      title: 'Enviando credencial...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    try {
+      const blob = await this.credentialPdfService.generateBlobFromElement(el);
+      const nombre = c!.persona.nombreCompleto;
+      await firstValueFrom(
+        this.mailService.sendCredentialEmail(email, blob, {
+          subject: nombre ? `Tu credencial - ${nombre}` : 'Tu credencial',
+        }),
+      );
+      Swal.close();
+      void Swal.fire({
+        icon: 'success',
+        title: 'Credencial enviada',
+        text: `Se envió la credencial a ${email}.`,
+        confirmButtonColor: '#163665',
+      });
+    } catch (err) {
+      console.error('Error al compartir credencial:', err);
+      Swal.close();
+      void Swal.fire({
+        icon: 'error',
+        title: 'No se pudo enviar',
+        text: getHttpErrorMessage(err, 'mail'),
+        confirmButtonColor: '#163665',
+      });
+    } finally {
+      this.sharing.set(false);
+    }
+  }
 }

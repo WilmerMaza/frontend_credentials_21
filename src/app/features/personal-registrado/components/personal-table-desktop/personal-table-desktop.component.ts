@@ -20,11 +20,12 @@ import type { PersonalItem } from '../../models/personal-item.model';
       <table class="pr-table">
         <colgroup>
           <col style="width: 5%" />
-          <col style="width: 18%" />
+          <col style="width: 16%" />
           <col style="width: 12%" />
-          <col style="width: 24%" />
+          <col style="width: 21%" />
           <col style="width: 10%" />
           <col style="width: 10%" />
+          <col style="width: 12%" />
           <col style="width: 14%" />
         </colgroup>
         <thead>
@@ -35,6 +36,7 @@ import type { PersonalItem } from '../../models/personal-item.model';
             <th>Correo institucional</th>
             <th>Fecha ingreso</th>
             <th>Estado</th>
+            <th>Tipo de registro</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -72,6 +74,9 @@ import type { PersonalItem } from '../../models/personal-item.model';
                     class="skeleton"
                     style="display: inline-block; width: 80px; height: 26px; border-radius: 999px;"
                   ></span>
+                </td>
+                <td>
+                  <span class="skeleton" style="display: inline-block; width: 100px; height: 24px; border-radius: 999px;"></span>
                 </td>
                 <td>
                   <div class="pr-actions">
@@ -126,6 +131,9 @@ import type { PersonalItem } from '../../models/personal-item.model';
                     <span class="dot"></span>
                     {{ getEstadoLabel(row.estado) }}
                   </span>
+                </td>
+                <td>
+                  <span class="pr-type-badge">{{ row.tipoRegistroNombre }}</span>
                 </td>
                 <td>
                   <div class="pr-actions">

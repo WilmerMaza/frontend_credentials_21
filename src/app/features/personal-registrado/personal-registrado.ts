@@ -50,6 +50,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   private readonly personalListService = inject(PersonalListService);
   private breakpointSub?: { unsubscribe: () => void };
   private breakpointSubMedium?: { unsubscribe: () => void };
+  private pageLoadSub?: { unsubscribe: () => void };
   public readonly getPhotoUrl = getPhotoUrl;
 
   /** Lista de personal desde el API. */
@@ -71,7 +72,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   /** Métricas calculadas desde el mismo JSON que la tabla (_allData). */
   readonly statCards = computed<StatCard[]>(() => {
     const data = this._allData();
-    const total = data.length;
+    const total = this.personalListService.totalRecords() || data.length;
     const activos = data.filter((r) => r.estado === 'activo').length;
     const inactivos = data.filter((r) => r.estado === 'inactivo').length;
     const pendientes = data.filter((r) => r.estado === 'pendiente').length;
@@ -106,22 +107,34 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     });
   });
 
-  readonly totalRecords = computed(() => this.filteredData().length);
+  readonly hasActiveFilters = computed(() => {
+    const { nombre, correo, identificacion } = this._appliedFilters();
+    return Boolean(nombre || correo || identificacion);
+  });
 
-  /** Registros por página según breakpoint: pequeño 4, mediano 8, grande 9. */
-  readonly effectivePageSize = computed(() =>
-    this.isMobile() ? 4 : this.isMedium() ? 8 : 9,
+  readonly totalRecords = computed(() =>
+    this.hasActiveFilters() ? this.filteredData().length : this.personalListService.totalRecords(),
   );
 
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.totalRecords() / this.effectivePageSize())),
-  );
+  /** Registros por página: sin filtros se respeta el `limit` que devuelve el backend. */
+  readonly effectivePageSize = computed(() => {
+    if (!this.hasActiveFilters()) {
+      return this.personalListService.pageSize();
+    }
+
+    return this.isMobile() ? 4 : this.isMedium() ? 8 : 9;
+  });
+
+  readonly totalPages = computed(() => {
+    if (!this.hasActiveFilters()) {
+      return Math.max(1, this.personalListService.totalPages());
+    }
+
+    return Math.max(1, Math.ceil(this.totalRecords() / this.effectivePageSize()));
+  });
 
   readonly pagedData = computed(() => {
-    const data = this.filteredData();
-    const size = this.effectivePageSize();
-    const start = this.pageIndex() * size;
-    return data.slice(start, start + size);
+    return this.filteredData();
   });
 
   readonly pageNumbers = computed(() => {
@@ -140,30 +153,29 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    // Cargar datos reales desde el API
-    this.personalListService.loadAll().subscribe();
-
     this.breakpointSub = this.breakpointObserver
       .observe('(max-width: 768px)')
       .subscribe((state) => {
         const mobile = state.matches;
         this.isMobile.set(mobile);
-        if (mobile) {
-          this.pageIndex.set(Math.min(this.pageIndex(), Math.max(0, this.totalPages() - 1)));
-        }
+        this.clampCurrentPage();
       });
     this.breakpointSubMedium = this.breakpointObserver
       .observe('(min-width: 769px) and (max-width: 1024px)')
       .subscribe((state) => {
         const medium = state.matches;
         this.isMedium.set(medium);
-        this.pageIndex.set(Math.min(this.pageIndex(), Math.max(0, this.totalPages() - 1)));
+        this.clampCurrentPage();
       });
+
+    // La primera consulta usa la página inicial que devuelve el backend.
+    this.loadInitialRecords();
   }
 
   ngOnDestroy(): void {
     this.breakpointSub?.unsubscribe();
     this.breakpointSubMedium?.unsubscribe();
+    this.pageLoadSub?.unsubscribe();
   }
 
   constructor() {
@@ -190,8 +202,14 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   }
 
   goToPage(page: number): void {
-    if (page >= 0 && page < this.totalPages()) {
-      this.pageIndex.set(page);
+    if (
+      page >= 0 &&
+      page < this.totalPages() &&
+      page !== this.pageIndex() &&
+      !this.loading() &&
+      !this.syncing()
+    ) {
+      this.loadServerPage(page);
     }
   }
 
@@ -201,8 +219,25 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     const size = this.effectivePageSize();
     const idx = this.pageIndex();
     const start = idx * size + 1;
-    const end = Math.min((idx + 1) * size, total);
+    const end = Math.min(start + this.pagedData().length - 1, total);
     return `Mostrando ${start}–${end} de ${total} registros`;
+  }
+
+  private loadInitialRecords(): void {
+    this.pageIndex.set(0);
+    this.pageLoadSub?.unsubscribe();
+    this.pageLoadSub = this.personalListService.loadAll().subscribe();
+  }
+
+  private loadServerPage(pageIndex: number): void {
+    const pageSize = this.personalListService.pageSize();
+    this.pageIndex.set(pageIndex);
+    this.pageLoadSub?.unsubscribe();
+    this.pageLoadSub = this.personalListService.loadAll(pageIndex + 1, pageSize).subscribe();
+  }
+
+  private clampCurrentPage(): void {
+    this.pageIndex.set(Math.min(this.pageIndex(), Math.max(0, this.totalPages() - 1)));
   }
 
   getEstadoLabel(estado: string): string {

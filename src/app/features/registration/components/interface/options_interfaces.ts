@@ -13,27 +13,27 @@ export type GradesOptionOF ={
 }
 
 export type GradesOptionSUB ={
-  value: 'MA2/C3' | 'MA1/CS' | 'S3/CP' | 'S2/SS' | 'S1/SV' | 'SJ/SP' | 'JT/SM';
+  value: 'MA2/C3' | 'MA1/CS' | 'S3/CP' | 'S2/SS' | 'S1/SV' | 'SJ/SP' | 'JT/SM' | 'JTC/SMC';
   label: string;
 }
 
 export type GradesOptionOFEjer ={
-  value: 'ST' | 'TE' | 'CT' | 'MY' | 'TC' | 'CR' | 'CBG' | 'MG' | 'GR';
+  value: 'ST' | 'TE' | 'CT' | 'MY' | 'TC' | 'CR' | 'BG' | 'MG' | 'GR';
   label: string;
 }
 
 export type GradesOptionSUBEjer ={
-  value: 'C3' | 'CS' | 'CP' | 'SS' | 'SV' | 'SP' | 'SM';
+  value: 'C3' | 'CS' | 'CP' | 'SS' | 'SV' | 'SP' | 'SM' | 'SMC';
   label: string;
 }
 
 export type GradesOptionOFAir ={
-  value: 'TK/ST' | 'TF/TE' | 'TN/CT' | 'CC/MY' | 'CF/TC' | 'CN/CR' | 'CA/BG' | 'VC/MG' | 'AL/GR';
+  value: 'ST' | 'TE' | 'CT' | 'MY' | 'TC' | 'CR' | 'BG' | 'MG' | 'GR';
   label: string;
 }
 
 export type GradesOptionSUBAir ={
-  value: 'MA2/C3' | 'MA1/CS' | 'S3/CP' | 'S2/SS' | 'S1/SV' | 'SJ/SP' | 'JT/SM';
+  value: 'AT' | 'T4' | 'T3' | 'T2' | 'T1' | 'TJ' | 'TJC';
   label: string;
 }
 

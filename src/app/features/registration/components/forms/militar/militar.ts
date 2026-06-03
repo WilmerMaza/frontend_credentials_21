@@ -11,6 +11,10 @@ import {
   ForceOptionM,
   GradesOptionOF,
   GradesOptionSUB,
+  GradesOptionOFEjer,
+  GradesOptionSUBEjer,
+  GradesOptionOFAir,
+  GradesOptionSUBAir,
 } from '../../interface/options_interfaces';
 
 @Component({
@@ -44,6 +48,8 @@ export class Militar implements OnInit {
     { value: 'TC', label: 'Teniente Coronel' },
     { value: 'CR', label: 'Coronel de Infanteria de Marina' },
     { value: 'BG', label: 'Brigadier General' },
+    { value: 'MG', label: 'Mayor General' },
+    { value: 'GR', label: 'General' },
   ];
 
   readonly gradesSUBEJ = [
@@ -51,9 +57,10 @@ export class Militar implements OnInit {
     { value: 'CS', label: 'Cabo Segundo' },
     { value: 'CP', label: 'Cabo Primero' },
     { value: 'SS', label: 'Sargento Segundo' },
-    { value: 'SV', label: 'Sargento Viceprimer' },
+    { value: 'SV', label: 'Sargento Viceprimero' },
     { value: 'SP', label: 'Sargento Primero' },
     { value: 'SM', label: 'Sargento Mayor' },
+    { value: 'SMC', label: 'Sargento Mayor de Comando' },
   ];
 
   readonly gradesOFNavy = [
@@ -65,6 +72,7 @@ export class Militar implements OnInit {
     { value: 'CN/CR', label: 'Capitan de Navio' },
     { value: 'CA/BG', label: 'Contralmirante' },
     { value: 'VC/MG', label: 'Vicealmirante' },
+    { value: 'AL/GR', label: 'Almirante' },
   ];
 
   readonly gradesOFIM = [
@@ -75,6 +83,8 @@ export class Militar implements OnInit {
     { value: 'CF/TC', label: 'Teniente Coronel' },
     { value: 'CN/CR', label: 'Coronel de Infanteria de Marina' },
     { value: 'CA/BG', label: 'Brigadier General' },
+    { value: 'VC/MG', label: 'Mayor General' },
+    { value: 'AL/GR', label: 'General' },
   ];
 
   readonly gradesSUBNavy = [
@@ -85,6 +95,7 @@ export class Militar implements OnInit {
     { value: 'S1/SV', label: 'Suboficial Primero' },
     { value: 'SJ/SP', label: 'Suboficial Jefe' },
     { value: 'JT/SM', label: 'Suboficial Jefe Tecnico' },
+    { value: 'JTC/SMC', label: 'Suboficial Jefe Tecnico de Comando' },
   ];
 
   readonly gradesSUBIM = [
@@ -95,6 +106,30 @@ export class Militar implements OnInit {
     { value: 'S1/SV', label: 'Sargento Viceprimer' },
     { value: 'SJ/SP', label: 'Sargento Primero' },
     { value: 'JT/SM', label: 'Sargento Mayor' },
+    { value: 'JTC/SMC', label: 'Sargento Mayor de Comando' },
+  ];
+
+  readonly gradesOFAIR = [
+    { value: 'ST', label: 'Subteniente' },
+    { value: 'TE', label: 'Teniente Efectivo' },
+    { value: 'CT', label: 'Capitan de Infanteria de Marina' },
+    { value: 'MY', label: 'Mayor de Infanteria de Marina' },
+    { value: 'TC', label: 'Teniente Coronel' },
+    { value: 'CR', label: 'Coronel de Infanteria de Marina' },
+    { value: 'BG', label: 'Brigadier General' },
+    { value: 'MG', label: 'Mayor General' },
+    { value: 'GR', label: 'General' },
+  ];
+
+  readonly gradesSUBAIR = [
+    { value: 'AT', label: 'Aerotecnico' },
+    { value: 'T4', label: 'Tecnico cuarto' },
+    { value: 'T3', label: 'Tecnico tercero' },
+    { value: 'T2', label: 'Tecnico segundo' },
+    { value: 'T1', label: 'Tecnico primero' },
+    { value: 'TS', label: 'Tecnico subjefe' },
+    { value: 'TJ', label: 'Tecnico jefe' },
+    { value: 'TJC', label: 'Tecnico jefe de Comando' },
   ];
 
   //categorias sencillas antes del listado iterado
@@ -132,54 +167,80 @@ export class Militar implements OnInit {
       categoria: [{ value: 'IMP', label: 'Infante de marina profesional' }],
     },
   ];
- 
+
   //formularios de control
 
   forceMCtrl = new FormControl<ForceOptionM['value'] | ''>('', {
     validators: [Validators.required],
   });
-  gradesCtrl = new FormControl<GradesOptionOF['value'] | ''>('', {
+  gradesCtrl = new FormControl<string>('', {
     validators: [Validators.required],
   });
   categorieCtrl = new FormControl<CategorieOptionM['value'] | ''>('', {
     validators: [Validators.required],
   });
-  categorieCtrlEJ = new FormControl<CategorieOptionM['value'] | ''>('', {
-    validators: [Validators.required],
-  });
 
-  //inicializador principal
+  //inicializador principal y limpia los campos
   ngOnInit(): void {
     this.group.addControl('force', this.forceMCtrl);
+    this.group.addControl('category', this.categorieCtrl);
     this.group.addControl('grades', this.gradesCtrl);
+
+    this.forceMCtrl.valueChanges.subscribe(() => {
+      this.categorieCtrl.setValue('');
+      this.gradesCtrl.setValue('');
+    });
+
+    this.categorieCtrl.valueChanges.subscribe(() => {
+      this.gradesCtrl.setValue('');
+    });
   }
 
   //trae los grados segun la categoria
-  public getgrades(Categorie: string) {
-    if (Categorie === 'OfficerNavy') {
-      return this.gradesOFNavy;
-    } else if (Categorie === 'OfficerIM') {
-      return this.gradesOFIM;
-    } else if (Categorie === 'SubofficerNavy') {
-      return this.gradesSUBNavy;
-    } else if (Categorie === 'SubofficerIM') {
-      return this.gradesSUBIM;
-    } else if (Categorie === 'ArmySubofficer') {
-      return this.gradesSUBEJ;
-    } else if (Categorie === 'ArmyOfficer') {
-      return this.gradesOFEJ;
-    } else {
-      return [];
+  public getgrades(category: string) {
+    switch (category) {
+      // ARMADA
+      case 'OfficerNavy':
+        return this.gradesOFNavy;
+
+      case 'OfficerIM':
+        return this.gradesOFIM;
+
+      case 'SubofficerNavy':
+        return this.gradesSUBNavy;
+
+      case 'SubofficerIM':
+        return this.gradesSUBIM;
+
+      // EJÉRCITO
+      case 'ArmyOfficer':
+        return this.gradesOFEJ;
+
+      case 'ArmySubofficer':
+        return this.gradesSUBEJ;
+
+      // FUERZA AÉREA
+      case 'OfficerAir':
+        return this.gradesOFAIR;
+
+      case 'SubofficerAir':
+        return this.gradesSUBAIR;
+
+      default:
+        return [];
     }
+  }
+ 
+  public getCategories(force: string): CategorieOptionM[] {
+
+  if (force === 'ejercito') {
+    return this.CategorieEjercito;
   }
 
-  public getCategories(force: string) {
-    if (force === 'ejercito') {
-      return this.CategorieEjercito;
-    } else if (force === 'fuerza_aerea') {
-      return this.CategorieAir;
-    } else {
-      return [];
-    }
+  if (force === 'fuerza_aerea') {
+    return this.CategorieAir;
   }
+
+  return [];
+}
 }

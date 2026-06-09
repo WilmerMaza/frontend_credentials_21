@@ -72,6 +72,7 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <div>
                   <div class="name">{{ row.nombreCompleto }}</div>
                   <div class="meta">{{ row.identificacion }}</div>
+                  <div class="type-chip">{{ row.tipoRegistroNombre }}</div>
                 </div>
               </div>
               <span class="badge" [class.ok]="row.estado === 'activo'" [class.warn]="row.estado === 'pendiente'" [class.off]="row.estado === 'inactivo'">

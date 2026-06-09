@@ -3,6 +3,7 @@ import {
   Component,
   afterNextRender,
   ElementRef,
+  EnvironmentInjector,
   inject,
   OnDestroy,
   signal,
@@ -19,12 +20,25 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
+import { firstValueFrom } from 'rxjs';
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
-import { mapCredentialToPersonalItem } from '../personal-registrado/models/personal-item.model';
+import {
+  mapCredentialToPersonalItem,
+  type CredentialApiResponse,
+} from '../personal-registrado/models/personal-item.model';
 import { RegistrationService, type RegistrationPayload } from '../../core/services/registration.service';
+import { CredentialPdfService } from '../../core/services/credential-pdf.service';
+import { MailService } from '../../core/services/mail.service';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
+import { buildCredentialPdfData } from '../credential-view/credential-mapper';
+import { getPhotoUrl } from '../../shared/utils/url.utils';
+import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
+import {
+  buildDuplicateEmailAlert,
+  getRegistrationErrorAlert,
+} from '../../shared/utils/registration-error.utils';
 
 import { InterEscuelas } from './components/forms/inter-escuelas/inter-escuelas';
 import { Militar } from './components/forms/militar/militar';
@@ -65,6 +79,9 @@ export class Registration implements OnDestroy {
   private readonly layoutLoading = inject(LayoutLoadingService);
   private readonly registrationService = inject(RegistrationService);
   private readonly personalListService = inject(PersonalListService);
+  private readonly credentialPdfService = inject(CredentialPdfService);
+  private readonly mailService = inject(MailService);
+  private readonly environmentInjector = inject(EnvironmentInjector);
 
   private static loadDraft(): Record<string, unknown> | null {
     if (typeof window === 'undefined') return null;
@@ -77,7 +94,7 @@ export class Registration implements OnDestroy {
     }
   }
 
-  loading = signal(false);
+  submitting = signal(false);
   selectedPhoto?: File;
   photoPreviewUrl = signal<string | null>(null);
   identitySectionExpanded = signal(true);
@@ -86,6 +103,7 @@ export class Registration implements OnDestroy {
 
   private cameraVideoRef = viewChild<ElementRef<HTMLVideoElement>>('cameraVideo');
   private cameraCanvasRef = viewChild<ElementRef<HTMLCanvasElement>>('cameraCanvas');
+  private cameraInputRef = viewChild<ElementRef<HTMLInputElement>>('cameraInput');
   private cameraStream: MediaStream | null = null;
 
   readonly types: Array<{ value: RegistrationType; label: string }> = [
@@ -186,15 +204,12 @@ export class Registration implements OnDestroy {
     if (url) URL.revokeObjectURL(url);
   }
 
-  async openCamera(): Promise<void> {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    );
-    if (isMobile) {
-      document.getElementById('reg-camera-input')?.click();
+  openCamera(): void {
+    if (this.canUseMediaDevices()) {
+      void this.startCameraStream();
       return;
     }
-    await this.startCameraStream();
+    void this.openNativeCameraPicker();
   }
 
   closeCamera(): void {
@@ -202,29 +217,79 @@ export class Registration implements OnDestroy {
     this.showCameraOverlay.set(false);
   }
 
+  private canUseMediaDevices(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      window.isSecureContext &&
+      typeof navigator.mediaDevices?.getUserMedia === 'function'
+    );
+  }
+
+  private waitNextRender(): Promise<void> {
+    return new Promise((resolve) => {
+      afterNextRender(() => resolve(), { injector: this.environmentInjector });
+    });
+  }
+
+  private async openNativeCameraPicker(): Promise<void> {
+    if (!this.identitySectionExpanded()) {
+      this.identitySectionExpanded.set(true);
+      await this.waitNextRender();
+    }
+
+    const input = this.cameraInputRef()?.nativeElement;
+    if (!input) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'No se pudo abrir la cámara',
+        text: 'Usa "Subir archivo" o abre la app con HTTPS para usar la cámara en el navegador.',
+        confirmButtonColor: '#0c2e57',
+      });
+      return;
+    }
+
+    input.value = '';
+    input.click();
+  }
+
   async startCameraStream(): Promise<void> {
+    this.showCameraOverlay.set(true);
+
     try {
-      this.showCameraOverlay.set(true);
-      setTimeout(async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: 640, height: 480 },
-        });
-        this.cameraStream = stream;
-        const video = this.cameraVideoRef()?.nativeElement;
-        if (video) {
-          video.srcObject = stream;
-          await video.play();
-        }
-      }, 100);
+      await this.waitNextRender();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'user' },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+      });
+
+      this.cameraStream = stream;
+      const video = this.cameraVideoRef()?.nativeElement;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+      }
     } catch (err) {
       console.error('Error accediendo a la cámara:', err);
+      this.showCameraOverlay.set(false);
+      this.stopCameraStream();
+
+      const input = this.cameraInputRef()?.nativeElement;
+      if (input) {
+        input.value = '';
+        input.click();
+        return;
+      }
+
       void Swal.fire({
         icon: 'error',
         title: 'Cámara no disponible',
         text: 'No se pudo acceder a la cámara. Puedes subir una foto desde tu dispositivo.',
         confirmButtonColor: '#0c2e57',
       });
-      this.showCameraOverlay.set(false);
     }
   }
 
@@ -296,6 +361,7 @@ export class Registration implements OnDestroy {
     const prev = this.photoPreviewUrl();
     if (prev) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(URL.createObjectURL(file));
+    input.value = '';
   }
 
   async onSaveDraft(): Promise<void> {
@@ -345,62 +411,220 @@ export class Registration implements OnDestroy {
     this.photoPreviewUrl.set(null);
   }
 
-  onSubmit(): void {
-    this.registrationForm.markAllAsTouched();
+  async onSubmit(): Promise<void> {
+    if (this.submitting()) return;
 
-    if (this.registrationForm.invalid) {
+    this.registrationForm.markAllAsTouched();
+    this.detailsGroup.markAllAsTouched();
+
+    const missing = this.collectMissingFields();
+    if (missing.length > 0) {
+      this.expandSectionsForMissing(missing);
+      const listHtml = missing.map((f) => `<li>${f}</li>`).join('');
       void Swal.fire({
         icon: 'error',
         title: 'Formulario incompleto',
-        text: 'Por favor revisa los campos marcados.',
+        html: `<p style="margin:0 0 8px">Complete los siguientes campos:</p><ul style="text-align:left;margin:0;padding-left:1.25rem">${listHtml}</ul>`,
         confirmButtonColor: '#163665',
       });
       return;
     }
 
     const raw = this.registrationForm.getRawValue();
+    const email = raw.common.institutionalEmail?.trim();
+
+    if (email) {
+      const exists = await firstValueFrom(this.personalListService.checkEmailExists(email));
+      if (exists) {
+        void this.showRegistrationAlert(buildDuplicateEmailAlert(email));
+        return;
+      }
+    }
+
     const rawDetails = raw.details as Record<string, unknown>;
 
-    // Enviamos todos los campos del formulario dinámico.
-    // El backend recibirá lo que haya disponible en este momento.
     const payload: RegistrationPayload = {
       type: raw.type,
       common: raw.common as RegistrationPayload['common'],
       details: rawDetails,
     };
 
+    this.submitting.set(true);
     this.registrationService.submitRegistration(payload, this.selectedPhoto).subscribe({
       next: (created) => {
-        // Usar la respuesta del API para añadir el ítem a la lista
-        const newItem = mapCredentialToPersonalItem(created);
-        this.personalListService.addItem(newItem);
-
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(REGISTRATION_DRAFT_KEY);
-        }
-        this.clearRegistrationForm();
-        void Swal.fire({
-          icon: 'success',
-          title: 'Registro exitoso',
-          text: 'Credencial creada correctamente.',
-          confirmButtonColor: '#163665',
-        });
-        this.navigationService.navigate('/personal-registrado');
+        void this.handleRegistrationSuccess(created, raw.common.institutionalEmail);
       },
       error: (err) => {
-        // El API puede devolver message como string o string[]
-        const raw = err?.error?.message;
-        const msg = Array.isArray(raw)
-          ? raw.join('\n')
-          : (raw ?? 'No se pudo completar el registro. Intente de nuevo.');
-        void Swal.fire({
-          icon: 'error',
-          title: 'Error al registrar',
-          html: `<pre style="text-align:left;font-size:13px;white-space:pre-wrap">${msg}</pre>`,
-          confirmButtonColor: '#163665',
-        });
+        void this.showRegistrationError(err, email);
       },
+      complete: () => this.submitting.set(false),
     });
+  }
+
+  private async showRegistrationError(err: unknown, email?: string): Promise<void> {
+    let alert = getRegistrationErrorAlert(err, email);
+
+    if (alert.title === 'Error al registrar' && email) {
+      const exists = await firstValueFrom(this.personalListService.checkEmailExists(email));
+      if (exists) {
+        alert = buildDuplicateEmailAlert(email);
+      }
+    }
+
+    await this.showRegistrationAlert(alert);
+  }
+
+  private async showRegistrationAlert(alert: {
+    icon: 'error' | 'warning';
+    title: string;
+    text: string;
+    focusField?: 'institutionalEmail';
+  }): Promise<void> {
+    await Swal.fire({
+      icon: alert.icon,
+      title: alert.title,
+      text: alert.text,
+      confirmButtonColor: '#163665',
+    });
+    if (alert.focusField === 'institutionalEmail') {
+      this.focusInstitutionalEmail();
+    }
+  }
+
+  private readonly fieldLabels: Record<string, string> = {
+    type: 'Tipo de registro',
+    fullName: 'Nombre completo',
+    idType: 'Tipo de identificación',
+    idNumber: 'Número de identificación',
+    birthDate: 'Fecha de nacimiento',
+    institutionalEmail: 'Correo institucional',
+    force: 'Fuerza',
+    grades: 'Grado',
+    sport: 'Disciplina o deporte',
+    course: 'Curso',
+  };
+
+  private collectMissingFields(): string[] {
+    const missing: string[] = [];
+
+    const typeCtrl = this.registrationForm.controls.type;
+    if (typeCtrl.invalid) {
+      missing.push(this.fieldLabels['type'] ?? 'Tipo de registro');
+    }
+
+    const common = this.registrationForm.controls.common;
+    for (const [key, control] of Object.entries(common.controls)) {
+      if (control.invalid) {
+        missing.push(this.fieldLabels[key] ?? key);
+      }
+    }
+
+    for (const [key, control] of Object.entries(this.detailsGroup.controls)) {
+      if (control.invalid) {
+        missing.push(this.fieldLabels[key] ?? key);
+      }
+    }
+
+    if (!this.selectedPhoto) {
+      missing.push('Foto para credencial');
+    }
+
+    return missing;
+  }
+
+  private expandSectionsForMissing(missing: string[]): void {
+    const identityFields = new Set([
+      'Tipo de registro',
+      'Nombre completo',
+      'Tipo de identificación',
+      'Número de identificación',
+      'Fecha de nacimiento',
+      'Correo institucional',
+      'Foto para credencial',
+    ]);
+
+    if (missing.some((f) => identityFields.has(f))) {
+      this.identitySectionExpanded.set(true);
+    }
+
+    const detailsFields = new Set(['Fuerza', 'Grado', 'Disciplina o deporte', 'Curso']);
+    if (missing.some((f) => detailsFields.has(f))) {
+      this.detailsSectionExpanded.set(true);
+    }
+  }
+
+  private focusInstitutionalEmail(): void {
+    if (typeof document === 'undefined') return;
+    this.identitySectionExpanded.set(true);
+    const el = document.querySelector<HTMLInputElement>(
+      'input[formcontrolname="institutionalEmail"]',
+    );
+    el?.focus();
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  private async handleRegistrationSuccess(
+    created: CredentialApiResponse,
+    institutionalEmail: string,
+  ): Promise<void> {
+    const newItem = mapCredentialToPersonalItem(created);
+    this.personalListService.addItem(newItem);
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(REGISTRATION_DRAFT_KEY);
+    }
+    this.clearRegistrationForm();
+
+    void Swal.fire({
+      title: 'Enviando credencial...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    let emailSent = false;
+    let mailErrorMessage: string | undefined;
+    try {
+      const pdfData = buildCredentialPdfData(
+        newItem,
+        newItem.photoUrl ? getPhotoUrl(newItem.photoUrl) : undefined,
+      );
+      const blob = await this.credentialPdfService.generateBlobFromData(
+        pdfData,
+        this.environmentInjector,
+      );
+      const nombre = newItem.nombreCompleto;
+      await firstValueFrom(
+        this.mailService.sendCredentialEmail(institutionalEmail, blob, {
+          subject: nombre ? `Tu credencial - ${nombre}` : 'Tu credencial',
+        }),
+      );
+      emailSent = true;
+    } catch (err) {
+      console.error('Error al enviar credencial por correo:', err);
+      mailErrorMessage = getHttpErrorMessage(err, 'mail');
+    }
+
+    Swal.close();
+
+    if (emailSent) {
+      void Swal.fire({
+        icon: 'success',
+        title: 'Registro exitoso',
+        text: `Credencial creada y enviada a ${institutionalEmail}.`,
+        confirmButtonColor: '#163665',
+      });
+    } else {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Registro exitoso',
+        text:
+          mailErrorMessage ??
+          'La credencial se creó correctamente, pero no se pudo enviar el correo. Puede compartirla desde la vista de credencial.',
+        confirmButtonColor: '#163665',
+      });
+    }
+
+    this.navigationService.navigate('/personal-registrado');
   }
 
   navigateTo(path: string): void {

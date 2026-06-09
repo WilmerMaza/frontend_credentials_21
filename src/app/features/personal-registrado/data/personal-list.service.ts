@@ -1,12 +1,14 @@
-import { HttpContext } from '@angular/common/http';
+import { HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap } from 'rxjs';
 import { EnapApi } from '../../../core/services/enap.api';
 import { BYPASS_SPINNER } from '../../../core/interceptors/loading.interceptor';
 import type { RegistrationPayload } from '../../../core/services/registration.service';
 import {
   type CredentialApiResponse,
+  type PaginatedCredentialsResponse,
   type PersonalItem,
+  getCredentialTypeLabel,
   mapCredentialToPersonalItem,
 } from '../models/personal-item.model';
 
@@ -16,38 +18,32 @@ export class PersonalListService {
   private readonly _loading = signal<boolean>(false);
   private readonly _syncing = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
-  private readonly CACHE_KEY = 'enap-personal-cache';
+  private readonly _totalRecords = signal<number>(0);
+  private readonly _currentPage = signal<number>(1);
+  private readonly _pageSize = signal<number>(10);
+  private readonly _totalPages = signal<number>(1);
 
   /** Señales públicas de solo lectura */
   readonly listSignal  = this._list.asReadonly();
   readonly loading     = this._loading.asReadonly();
   readonly syncing     = this._syncing.asReadonly();
   readonly error       = this._error.asReadonly();
+  readonly totalRecords = this._totalRecords.asReadonly();
+  readonly currentPage = this._currentPage.asReadonly();
+  readonly pageSize = this._pageSize.asReadonly();
+  readonly totalPages = this._totalPages.asReadonly();
 
-  constructor(private enap: EnapApi) {
-    // Restaurar caché al inicializar
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem(this.CACHE_KEY);
-        if (cached) {
-          this._list.set(JSON.parse(cached));
-        }
-      } catch (e) {
-        console.error('Error restaurando caché:', e);
-      }
-    }
-  }
+  constructor(private enap: EnapApi) {}
 
   /**
    * GET /credentials
-   * Carga todos los registros desde el API y los mapea al modelo interno.
-   * Utiliza la estrategia Stale-While-Revalidate con caché local y actualización en segundo plano.
+   * Carga la página solicitada desde el API y la mapea al modelo interno.
    */
-  loadAll(): Observable<CredentialApiResponse[]> {
-    const hasCache = this._list().length > 0;
+  loadAll(page?: number, limit?: number): Observable<CredentialApiResponse[]> {
+    const hasExistingData = this._list().length > 0;
 
-    // Solo mostramos el esqueleto de carga interno si no hay nada en el caché.
-    if (!hasCache) {
+    // Solo mostramos el esqueleto de carga interno si no hay datos visibles.
+    if (!hasExistingData) {
       this._loading.set(true);
     } else {
       this._syncing.set(true);
@@ -55,41 +51,104 @@ export class PersonalListService {
     this._error.set(null);
 
     const context = new HttpContext().set(BYPASS_SPINNER, true);
+    let params = new HttpParams();
+    if (page !== undefined) {
+      params = params.set('page', page);
+    }
+    if (limit !== undefined) {
+      params = params.set('limit', limit);
+    }
 
-    return this.enap.get<CredentialApiResponse[]>('/credentials', undefined, context).pipe(
+    return this.enap.get<PaginatedCredentialsResponse>('/credentials', params, context).pipe(
       tap({
-        next: (data) => {
-          const items = data.map(mapCredentialToPersonalItem);
-          this._list.set(items);
-
-          // Guardar en caché local
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem(this.CACHE_KEY, JSON.stringify(items));
-            } catch (e) {
-              console.error('Error guardando en caché:', e);
-            }
-          }
-
+        next: (response) => {
+          this.assertCredentialsResponse(response);
+          this.applyCredentialsResponse(response);
           this._loading.set(false);
           this._syncing.set(false);
         },
-        error: (err) => {
-          console.error('Error cargando credenciales:', err);
-          if (!hasCache) {
-            this._error.set('No se pudieron cargar los registros. Intenta de nuevo.');
-          }
-          this._loading.set(false);
-          this._syncing.set(false);
-        },
+      }),
+      map((response) => response.data),
+      catchError((err) => {
+        console.error('Error cargando credenciales:', err);
+        if (err?.status !== 429 && !hasExistingData) {
+          this._error.set('No se pudieron cargar los registros. Intenta de nuevo.');
+        }
+        this._loading.set(false);
+        this._syncing.set(false);
+        return of([]);
       })
     );
   }
 
+  /**
+   * GET /credentials/:id
+   * Obtiene el detalle de una credencial para construir la vista completa.
+   */
+  getById(id: string): Observable<PersonalItem> {
+    const context = new HttpContext().set(BYPASS_SPINNER, true);
+
+    return this.enap
+      .get<CredentialApiResponse>(`/credentials/${encodeURIComponent(id)}`, undefined, context)
+      .pipe(map(mapCredentialToPersonalItem));
+  }
 
   /** Añade un ítem en memoria (después de un registro exitoso). */
   addItem(item: PersonalItem): void {
     this._list.update((prev) => [...prev, item]);
+  }
+
+  /** Comprueba si el correo ya existe en la lista cargada en memoria. */
+  hasEmailInCache(email: string): boolean {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return false;
+    return this._list().some((item) => normalizeEmail(item.correo) === normalized);
+  }
+
+  /**
+   * Verifica en el API si el correo institucional ya está registrado.
+   * El backend puede devolver 500 genérico por violación unique en Prisma.
+   */
+  checkEmailExists(email: string): Observable<boolean> {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return of(false);
+    if (this.hasEmailInCache(email)) return of(true);
+
+    const context = new HttpContext().set(BYPASS_SPINNER, true);
+
+    return this.enap
+      .get<PaginatedCredentialsResponse>(
+        '/credentials',
+        new HttpParams().set('page', '1').set('limit', '1'),
+        context,
+      )
+      .pipe(
+        switchMap((first) => {
+          const total = Math.max(first.total ?? 0, first.data.length);
+          if (total === 0) return of(false);
+
+          const limit = Math.min(total, 5000);
+          if (limit <= first.data.length) {
+            return of(this.emailExistsInResponses(first.data, normalized));
+          }
+
+          return this.enap
+            .get<PaginatedCredentialsResponse>(
+              '/credentials',
+              new HttpParams().set('page', '1').set('limit', String(limit)),
+              context,
+            )
+            .pipe(map((response) => this.emailExistsInResponses(response.data, normalized)));
+        }),
+        catchError(() => of(false)),
+      );
+  }
+
+  private emailExistsInResponses(
+    rows: CredentialApiResponse[],
+    normalizedEmail: string,
+  ): boolean {
+    return rows.some((row) => normalizeEmail(row.institutionalEmail) === normalizedEmail);
   }
 
   /**
@@ -104,25 +163,54 @@ export class PersonalListService {
     const year = new Date().getFullYear();
     const id = `new-${Date.now()}`;
     const identificacion = idNumber || `MIL-${year}-${String(Date.now()).slice(-6)}`;
+    const tipoRegistroCodigo = String(payload.type ?? 'militar');
+    const tipoRegistroNombre = getCredentialTypeLabel(tipoRegistroCodigo);
     const rango =
       (details['grades'] as string) ||
       (details['force'] as string) ||
-      'Por asignar';
+      tipoRegistroNombre;
 
     return {
       id,
       nombreCompleto: fullName,
       identificacion,
       rango,
-      unidad: String(details['unit'] ?? ''),
+      unidad: String(details['unit'] ?? details['force'] ?? ''),
+      tipoRegistroCodigo,
+      tipoRegistroNombre,
+      detallesRegistro: details,
       estado: 'pendiente',
-      correo: `pendiente.${id}@fuerzasarmadas.mil`,
+      correo: String(common['institutionalEmail'] ?? `pendiente.${id}@fuerzasarmadas.mil`),
       fechaIngreso: formatDate(new Date()),
+      fechaNacimiento: formatDate(new Date(String(common['birthDate'] ?? ''))),
+      telefono: String(common['phone'] ?? '') || undefined,
+      tipoIdentificacion: String(common['idType'] ?? '') || undefined,
     };
+  }
+
+  private assertCredentialsResponse(response: PaginatedCredentialsResponse): void {
+    if (!Array.isArray(response?.data)) {
+      throw new Error('La respuesta de credenciales no contiene un arreglo en data.');
+    }
+  }
+
+  private applyCredentialsResponse(response: PaginatedCredentialsResponse): void {
+    const items = response.data.map(mapCredentialToPersonalItem);
+    this._list.set(items);
+    this._totalRecords.set(response.total);
+    this._currentPage.set(response.page);
+    this._pageSize.set(response.limit);
+    this._totalPages.set(response.totalPages);
   }
 }
 
+function normalizeEmail(email: string | null | undefined): string {
+  return (email ?? '').trim().toLowerCase();
+}
+
 function formatDate(d: Date): string {
+  if (Number.isNaN(d.getTime())) return '';
+
   const day   = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year  = d.getFullYear();

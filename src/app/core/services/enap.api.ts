@@ -44,16 +44,19 @@ export class EnapApi {
   request<T>(
     method: string,
     endpoint: string,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Observable<any> {
     const url = `${this.baseUrl}${endpoint}`;
     return this.http
       .request<T>(method, url, {
         params: options.params,
         body: options.body,
+        headers: options.headers,
+        context: options.context,
         responseType: options.responseType ?? 'json',
-        observe: options.observe ?? 'body', withCredentials: true
-      } as any) // necesario para encajar con múltiples firmas internas de HttpClient.request() :contentReference[oaicite:3]{index=3}
+        observe: options.observe ?? 'body',
+        withCredentials: true,
+      } as any)
       .pipe(catchError(this.handleError));
   }
 

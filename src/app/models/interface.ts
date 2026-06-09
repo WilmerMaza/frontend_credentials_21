@@ -1,4 +1,4 @@
-import { HttpParams } from '@angular/common/http';
+import { HttpContext, HttpHeaders, HttpParams } from '@angular/common/http';
 
 export interface listInfo {
   value: string;
@@ -21,6 +21,8 @@ export interface RequestOptions {
   body?: any;
   responseType?: 'json' | 'blob' | 'arraybuffer';
   observe?: 'body' | 'response';
+  headers?: HttpHeaders;
+  context?: HttpContext;
 }
 
 export interface responseUploadMode {

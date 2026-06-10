@@ -49,141 +49,291 @@
             <div class="reg-card__body reg-identity-grid">
               <div class="reg-identity-photo">
                 <div
-                  class="reg-photo-preview"
-                  [class.reg-photo-preview--empty]="!photoPreviewUrl()"
-                  role="button"
-                  tabindex="0"
-                  (click)="fileInput.click()"
-                  (keydown.enter)="fileInput.click()"
-                  (keydown.space)="$event.preventDefault(); fileInput.click()"
+                  class="reg-photo-card"
+                  [class.reg-photo-card--error]="photoRequired()"
                 >
-                  @if (photoPreviewUrl()) {
-                    <img [src]="photoPreviewUrl()!" alt="Foto de perfil" />
-                  } @else {
-                    <div class="reg-photo-placeholder">
-                      <mat-icon>face</mat-icon>
-                      <span>Foto para credencial *</span>
-                    </div>
-                  }
-                </div>
-                <div class="reg-photo-actions">
-                  <button type="button" class="reg-photo-btn" (click)="fileInput.click()">
-                    <mat-icon>photo_library</mat-icon>
-                    <span>Subir archivo</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="reg-photo-btn reg-photo-btn--camera"
-                    (click)="openCamera()"
+                  <h3 class="reg-photo-card__title">Foto para credencial *</h3>
+
+                  <div
+                    class="reg-photo-preview"
+                    [class.reg-photo-preview--filled]="!!photoPreviewUrl()"
+                    role="button"
+                    tabindex="0"
+                    (click)="fileInput.click()"
+                    (keydown.enter)="fileInput.click()"
+                    (keydown.space)="$event.preventDefault(); fileInput.click()"
                   >
-                    <mat-icon>camera_alt</mat-icon>
-                    <span>Tomar foto</span>
-                  </button>
+                    @if (photoPreviewUrl()) {
+                      <img [src]="photoPreviewUrl()!" alt="Foto de perfil" />
+                    } @else {
+                      <div class="reg-photo-avatar">
+                        <mat-icon class="reg-photo-avatar__icon">person</mat-icon>
+                        <button
+                          type="button"
+                          class="reg-photo-avatar__camera"
+                          aria-label="Tomar foto"
+                          (click)="openCamera(); $event.stopPropagation()"
+                        >
+                          <mat-icon>photo_camera</mat-icon>
+                        </button>
+                      </div>
+                    }
+                  </div>
+
+                  <p class="reg-photo-card__hint">
+                    La foto debe ser reciente, frontal y con fondo claro.
+                  </p>
+
+                  <div class="reg-photo-actions">
+                    <button type="button" class="reg-photo-btn" (click)="fileInput.click()">
+                      <mat-icon>upload</mat-icon>
+                      <span>Subir archivo</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="reg-photo-btn reg-photo-btn--camera"
+                      (click)="openCamera()"
+                    >
+                      <mat-icon>photo_camera</mat-icon>
+                      <span>Tomar foto</span>
+                    </button>
+                  </div>
+
+                  <div class="reg-photo-card__meta">
+                    <span>Formatos aceptados: JPG, PNG</span>
+                    <span>Tamaño máximo: 5MB</span>
+                  </div>
+                  @if (photoRequired()) {
+                    <p class="reg-photo-card__error" role="alert">
+                      La foto es obligatoria para completar el registro.
+                    </p>
+                  }
                 </div>
               </div>
 
               <div class="reg-identity-fields">
-                <div class="reg-field-row reg-field-row--double">
-                  <div class="reg-field-group">
-                    <div class="reg-field-label"><span>Tipo de Registro *</span></div>
-                    <mat-form-field appearance="outline" class="reg-field">
-                      <mat-select
-                        formControlName="type"
-                        (selectionChange)="onTypeChange($event.value)"
-                        placeholder="Seleccione tipo"
-                      >
-                        @for (t of types; track t.value) {
-                          <mat-option [value]="t.value">{{ t.label }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
+                <div class="reg-type-selector">
+                  <div class="reg-type-selector__head">
+                    <span class="reg-type-selector__icon" aria-hidden="true">
+                      <mat-icon>category</mat-icon>
+                    </span>
+                    <div class="reg-type-selector__copy">
+                      <span class="reg-type-selector__eyebrow">Paso clave</span>
+                      <span class="reg-type-selector__title">Tipo de Registro *</span>
+                      <span class="reg-type-selector__hint">
+                        Define la categoría del personal y los campos adicionales del formulario.
+                      </span>
+                    </div>
+                    <span class="reg-type-selector__badge">{{ getTypeLabel() }}</span>
                   </div>
-                  <div class="reg-field-group" formGroupName="common">
-                    <div class="reg-field-label"><span>Nombre Completo *</span></div>
-                    <mat-form-field appearance="outline" class="reg-field">
-                      <input
-                        matInput
-                        formControlName="fullName"
-                        placeholder="Ej: Juan Carlos Pérez Gómez"
-                      />
-                      @if (
-                        registrationForm.controls.common.controls.fullName.touched &&
-                        registrationForm.controls.common.controls.fullName.hasError('required')
-                      ) {
-                        <mat-error>El nombre es requerido</mat-error>
+                  <mat-form-field appearance="outline" class="reg-field reg-type-selector__field">
+                    <mat-select
+                      formControlName="type"
+                      (selectionChange)="onTypeChange($event.value)"
+                      placeholder="Seleccione el tipo de registro"
+                    >
+                      @for (t of types(); track t.value) {
+                        <mat-option [value]="t.value">{{ t.label }}</mat-option>
                       }
-                    </mat-form-field>
-                  </div>
+                    </mat-select>
+                  </mat-form-field>
                 </div>
 
-                <div formGroupName="common">
-                  <div class="reg-field-row reg-field-row--double">
-                    <div class="reg-field-group">
-                      <div class="reg-field-label">
-                        <mat-icon>badge</mat-icon>
-                        <span>Tipo de Identificación</span>
-                      </div>
-                      <mat-form-field appearance="outline" class="reg-field">
-                        <mat-select formControlName="idType" placeholder="Seleccione tipo">
-                          @for (t of idTypes; track t.value) {
-                            <mat-option [value]="t.value">{{ t.label }}</mat-option>
+                <div formGroupName="common" class="reg-form-sections">
+                  <section class="reg-form-section">
+                    <h3 class="reg-form-section__title">Datos personales</h3>
+                    <div class="reg-field-row reg-field-row--double">
+                      <div class="reg-field-group">
+                        <div class="reg-field-label">
+                          <mat-icon>person</mat-icon>
+                          <span>Nombre *</span>
+                        </div>
+                        <mat-form-field appearance="outline" class="reg-field">
+                          <input
+                            matInput
+                            formControlName="firstName"
+                            placeholder="Ej: Juan Carlos"
+                          />
+                          @if (
+                            registrationForm.controls.common.controls.firstName.touched &&
+                            registrationForm.controls.common.controls.firstName.hasError('required')
+                          ) {
+                            <mat-error>El nombre es requerido</mat-error>
                           }
-                        </mat-select>
-                        @if (
-                          registrationForm.controls.common.controls.idType.touched &&
-                          registrationForm.controls.common.controls.idType.hasError('required')
-                        ) {
-                          <mat-error>El tipo es requerido</mat-error>
-                        }
-                      </mat-form-field>
-                    </div>
-                    <div class="reg-field-group">
-                      <div class="reg-field-label">
-                        <span>Número de Identificación *</span>
+                        </mat-form-field>
                       </div>
-                      <mat-form-field appearance="outline" class="reg-field">
-                        <input matInput formControlName="idNumber" placeholder="Ej: 1234567890" />
-                        @if (
+                      <div class="reg-field-group">
+                        <div class="reg-field-label">
+                          <mat-icon>person_outline</mat-icon>
+                          <span>Apellido *</span>
+                        </div>
+                        <mat-form-field appearance="outline" class="reg-field">
+                          <input
+                            matInput
+                            formControlName="lastName"
+                            placeholder="Ej: Pérez Gómez"
+                          />
+                          @if (
+                            registrationForm.controls.common.controls.lastName.touched &&
+                            registrationForm.controls.common.controls.lastName.hasError('required')
+                          ) {
+                            <mat-error>El apellido es requerido</mat-error>
+                          }
+                        </mat-form-field>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="reg-form-section">
+                    <h3 class="reg-form-section__title">Identificación</h3>
+                    <div class="reg-field-row reg-field-row--double">
+                      <div class="reg-field-group">
+                        <div class="reg-field-label">
+                          <mat-icon>badge</mat-icon>
+                          <span>Tipo de Identificación *</span>
+                        </div>
+                        <mat-form-field appearance="outline" class="reg-field">
+                          <mat-select formControlName="idType" placeholder="Seleccione tipo">
+                            @for (t of idTypes; track t.value) {
+                              <mat-option [value]="t.value">{{ t.label }}</mat-option>
+                            }
+                          </mat-select>
+                          @if (
+                            registrationForm.controls.common.controls.idType.touched &&
+                            registrationForm.controls.common.controls.idType.hasError('required')
+                          ) {
+                            <mat-error>El tipo es requerido</mat-error>
+                          }
+                        </mat-form-field>
+                      </div>
+                      <div class="reg-field-group">
+                        <div class="reg-field-label">
+                          <mat-icon>pin</mat-icon>
+                          <span>Número de Identificación *</span>
+                        </div>
+                        <mat-form-field
+                          appearance="outline"
+                          class="reg-field reg-field--external-feedback"
+                          [class.reg-field--success]="isIdentityVerified()"
+                          subscriptSizing="dynamic"
+                        >
+                          <input
+                            matInput
+                            formControlName="idNumber"
+                            placeholder="Ej: 1234567890"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            (input)="onDigitsOnlyInput($event, 'idNumber')"
+                          />
+                          @if (identityAvailability() === 'checking') {
+                            <mat-icon matSuffix class="reg-field-status reg-field-status--checking">
+                              hourglass_empty
+                            </mat-icon>
+                          } @else if (isIdentityVerified()) {
+                            <mat-icon matSuffix class="reg-field-status reg-field-status--success">
+                              check_circle
+                            </mat-icon>
+                          } @else if (
+                            registrationForm.controls.common.controls.idNumber.hasError('duplicateIdentity')
+                          ) {
+                            <mat-icon matSuffix class="reg-field-status reg-field-status--error">
+                              cancel
+                            </mat-icon>
+                          }
+                        </mat-form-field>
+                        @if (identityAvailability() === 'checking') {
+                          <p class="reg-field-hint">Verificando identificación...</p>
+                        } @else if (isIdentityVerified()) {
+                          <p class="reg-field-success" role="status">
+                            <mat-icon>verified</mat-icon>
+                            Identificación verificada y disponible
+                          </p>
+                        } @else if (
+                          registrationForm.controls.common.controls.idNumber.hasError('duplicateIdentity')
+                        ) {
+                          <p class="reg-field-error" role="alert">
+                            Este número de identificación ya está registrado
+                          </p>
+                        } @else if (
                           registrationForm.controls.common.controls.idNumber.touched &&
                           registrationForm.controls.common.controls.idNumber.hasError('required')
                         ) {
-                          <mat-error>El número es requerido</mat-error>
+                          <p class="reg-field-error" role="alert">El número es requerido</p>
+                        } @else if (
+                          registrationForm.controls.common.controls.idNumber.touched &&
+                          registrationForm.controls.common.controls.idNumber.hasError('digitsOnly')
+                        ) {
+                          <p class="reg-field-error" role="alert">Solo se permiten números</p>
+                        }
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="reg-form-section">
+                    <h3 class="reg-form-section__title">Fechas y vigencia</h3>
+                    <div class="reg-field-row reg-field-row--double">
+                    <div class="reg-field-group">
+                      <div class="reg-field-label">
+                        <mat-icon>calendar_month</mat-icon>
+                        <span>Fecha de Nacimiento *</span>
+                      </div>
+                      <mat-form-field appearance="outline" class="reg-field">
+                        <input
+                          matInput
+                          [matDatepicker]="birthPicker"
+                          formControlName="birthDate"
+                          placeholder="dd/mm/aaaa"
+                        />
+                        <mat-datepicker-toggle matSuffix [for]="birthPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #birthPicker></mat-datepicker>
+                        @if (
+                          registrationForm.controls.common.controls.birthDate.touched &&
+                          registrationForm.controls.common.controls.birthDate.hasError('required')
+                        ) {
+                          <mat-error>La fecha es requerida</mat-error>
                         }
                       </mat-form-field>
                     </div>
-                  </div>
-
-                  <div class="reg-field-row reg-field-row--full">
-                    <div class="reg-field-label">
-                      <mat-icon>calendar_month</mat-icon>
-                      <span>Fecha de Nacimiento *</span>
+                    <div class="reg-field-group">
+                      <div class="reg-field-label">
+                        <mat-icon>event_available</mat-icon>
+                        <span>Vigencia de la credencial *</span>
+                      </div>
+                      <mat-form-field appearance="outline" class="reg-field">
+                        <input
+                          matInput
+                          [matDatepicker]="validUntilPicker"
+                          formControlName="validUntil"
+                          placeholder="Válido hasta"
+                          [min]="minValidUntilDate"
+                        />
+                        <mat-datepicker-toggle matSuffix [for]="validUntilPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #validUntilPicker></mat-datepicker>
+                        @if (
+                          registrationForm.controls.common.controls.validUntil.touched &&
+                          registrationForm.controls.common.controls.validUntil.hasError('required')
+                        ) {
+                          <mat-error>La vigencia es requerida</mat-error>
+                        }
+                      </mat-form-field>
                     </div>
-                    <mat-form-field appearance="outline" class="reg-field reg-field--full">
-                      <input
-                        matInput
-                        [matDatepicker]="birthPicker"
-                        formControlName="birthDate"
-                        placeholder="dd/mm/aaaa"
-                      />
-                      <mat-datepicker-toggle matSuffix [for]="birthPicker"></mat-datepicker-toggle>
-                      <mat-datepicker #birthPicker></mat-datepicker>
-                      @if (
-                        registrationForm.controls.common.controls.birthDate.touched &&
-                        registrationForm.controls.common.controls.birthDate.hasError('required')
-                      ) {
-                        <mat-error>La fecha es requerida</mat-error>
-                      }
-                    </mat-form-field>
-                  </div>
+                    </div>
+                  </section>
 
-                  <!-- Correo institucional y teléfono -->
-                  <div class="reg-field-row reg-field-row--double">
+                  <section class="reg-form-section reg-form-section--last">
+                    <h3 class="reg-form-section__title">Contacto</h3>
+                    <div class="reg-field-row reg-field-row--double">
                     <div class="reg-field-group">
                       <div class="reg-field-label">
                         <mat-icon>email</mat-icon>
                         <span>Correo Institucional *</span>
                       </div>
-                      <mat-form-field appearance="outline" class="reg-field">
+                      <mat-form-field
+                        appearance="outline"
+                        class="reg-field reg-field--external-feedback"
+                        [class.reg-field--success]="isEmailVerified()"
+                        subscriptSizing="dynamic"
+                      >
                         <input
                           matInput
                           formControlName="institutionalEmail"
@@ -191,30 +341,73 @@
                           autocomplete="email"
                           type="email"
                         />
-                        @if (registrationForm.controls.common.controls.institutionalEmail.touched) {
-                          @if (registrationForm.controls.common.controls.institutionalEmail.hasError('required')) {
-                            <mat-error>El correo institucional es requerido</mat-error>
-                          } @else if (registrationForm.controls.common.controls.institutionalEmail.hasError('email')) {
-                            <mat-error>Ingrese un correo válido</mat-error>
-                          }
+                        @if (emailAvailability() === 'checking') {
+                          <mat-icon matSuffix class="reg-field-status reg-field-status--checking">
+                            hourglass_empty
+                          </mat-icon>
+                        } @else if (isEmailVerified()) {
+                          <mat-icon matSuffix class="reg-field-status reg-field-status--success">
+                            check_circle
+                          </mat-icon>
+                        } @else if (
+                          registrationForm.controls.common.controls.institutionalEmail.hasError('duplicateEmail')
+                        ) {
+                          <mat-icon matSuffix class="reg-field-status reg-field-status--error">
+                            cancel
+                          </mat-icon>
                         }
                       </mat-form-field>
+                      @if (emailAvailability() === 'checking') {
+                        <p class="reg-field-hint">Verificando correo...</p>
+                      } @else if (isEmailVerified()) {
+                        <p class="reg-field-success" role="status">
+                          <mat-icon>verified</mat-icon>
+                          Correo verificado y disponible
+                        </p>
+                      } @else if (
+                        registrationForm.controls.common.controls.institutionalEmail.hasError('duplicateEmail')
+                      ) {
+                        <p class="reg-field-error" role="alert">Este correo ya está registrado</p>
+                      } @else if (
+                        registrationForm.controls.common.controls.institutionalEmail.touched &&
+                        registrationForm.controls.common.controls.institutionalEmail.hasError('required')
+                      ) {
+                        <p class="reg-field-error" role="alert">El correo institucional es requerido</p>
+                      } @else if (
+                        registrationForm.controls.common.controls.institutionalEmail.touched &&
+                        registrationForm.controls.common.controls.institutionalEmail.hasError('email')
+                      ) {
+                        <p class="reg-field-error" role="alert">Ingrese un correo válido</p>
+                      }
                     </div>
                     <div class="reg-field-group">
                       <div class="reg-field-label">
                         <mat-icon>phone</mat-icon>
                         <span>Teléfono</span>
                       </div>
-                      <mat-form-field appearance="outline" class="reg-field">
+                      <mat-form-field
+                        appearance="outline"
+                        class="reg-field reg-field--external-feedback"
+                        subscriptSizing="dynamic"
+                      >
                         <input
                           matInput
                           formControlName="phone"
                           placeholder="Ej: 3001234567"
-                          type="tel"
+                          inputmode="numeric"
+                          autocomplete="tel"
+                          (input)="onDigitsOnlyInput($event, 'phone')"
                         />
                       </mat-form-field>
+                      @if (
+                        registrationForm.controls.common.controls.phone.touched &&
+                        registrationForm.controls.common.controls.phone.hasError('digitsOnly')
+                      ) {
+                        <p class="reg-field-error" role="alert">Solo se permiten números</p>
+                      }
                     </div>
                   </div>
+                  </section>
                 </div>
               </div>
             </div>
@@ -280,20 +473,10 @@
                 <span class="reg-type-tag__label">{{ getTypeLabel() }}</span>
               </div>
 
-              @switch (registrationForm.controls.type.value) {
-                @case ('inter-escuelas') {
-                  <app-inter-escuelas [group]="detailsGroup"></app-inter-escuelas>
-                }
-                @case ('militar') {
-                  <app-militar [group]="detailsGroup"></app-militar>
-                }
-                @default {
-                  <div class="reg-field-label">
-                    <mat-icon>info</mat-icon>
-                    <span>Seleccione un tipo para ver campos adicionales</span>
-                  </div>
-                }
-              }
+              <app-dynamic-credential-form
+                [group]="detailsGroup"
+                [schema]="activeSchema()"
+              ></app-dynamic-credential-form>
             </div>
           }
         </div>
@@ -301,25 +484,41 @@
 
       <!-- Botones de acción al final del formulario -->
       <div class="reg-actions-bar">
-        <button
-          mat-stroked-button
-          type="button"
-          class="reg-btn ui-btn-secondary"
-          (click)="onSaveDraft()"
-        >
-          <mat-icon>save</mat-icon>
-          Guardar Borrador
-        </button>
-        <button
-          mat-flat-button
-          type="button"
-          class="reg-btn reg-btn--primary ui-btn-primary"
-          (click)="onSubmit()"
-          [disabled]="registrationForm.invalid || submitting()"
-        >
-          <mat-icon>{{ submitting() ? 'hourglass_empty' : 'check_circle' }}</mat-icon>
-          {{ submitting() ? 'Procesando...' : 'Finalizar Registro' }}
-        </button>
+        @let blockers = getSubmitBlockers();
+        @if (!canSubmitForm() && blockers.length > 0) {
+          <div class="reg-submit-checklist" role="status" aria-live="polite">
+            <p class="reg-submit-checklist__title">
+              <mat-icon>playlist_add_check</mat-icon>
+              Para finalizar el registro, complete lo siguiente:
+            </p>
+            <ul class="reg-submit-checklist__list">
+              @for (item of blockers; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+        }
+        <div class="reg-actions-bar__buttons">
+          <button
+            mat-stroked-button
+            type="button"
+            class="reg-btn ui-btn-secondary"
+            (click)="onSaveDraft()"
+          >
+            <mat-icon>save</mat-icon>
+            Guardar Borrador
+          </button>
+          <button
+            mat-flat-button
+            type="button"
+            class="reg-btn reg-btn--primary ui-btn-primary"
+            (click)="onSubmit()"
+            [disabled]="!canSubmitForm()"
+          >
+            <mat-icon>{{ submitting() ? 'hourglass_empty' : 'check_circle' }}</mat-icon>
+            {{ submitting() ? 'Procesando...' : 'Finalizar Registro' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>

@@ -29,6 +29,12 @@ export const HOME_ROUTES: Routes = [
           import('../registration/registration').then((m) => m.Registration),
         data: { breadcrumb: 'Registro de Personal' },
       },
+      {
+        path: 'editar/:id',
+        loadComponent: () =>
+          import('../credential-edit/credential-edit').then((m) => m.CredentialEdit),
+        data: { breadcrumb: 'Editar credencial' },
+      },
       // Visualización de credencial (escarapela)
       {
         path: 'credential/:id',

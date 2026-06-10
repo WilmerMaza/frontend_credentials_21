@@ -71,17 +71,14 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
 
   /** Métricas calculadas desde el mismo JSON que la tabla (_allData). */
   readonly statCards = computed<StatCard[]>(() => {
-    const data = this._allData();
-    const total = this.personalListService.totalRecords() || data.length;
-    const activos = data.filter((r) => r.estado === 'activo').length;
-    const inactivos = data.filter((r) => r.estado === 'inactivo').length;
-    const pendientes = data.filter((r) => r.estado === 'pendiente').length;
+    const total = this.personalListService.totalRecords();
+    const summary = this.personalListService.summary();
     return [
       { label: 'Registrados', total, icon: 'group' },
-      { label: 'Activos', total: activos, icon: 'check' },
-      { label: 'Inactivos', total: inactivos, icon: 'close' },
-      { label: 'Pend. credencial', total: pendientes, icon: 'chat_bubble' },
-      { label: 'Pendientes', total: pendientes, icon: 'schedule' },
+      { label: 'Activos', total: summary.activas, icon: 'check' },
+      { label: 'Inactivos', total: summary.inactivas, icon: 'close' },
+      { label: 'Pend. credencial', total: summary.pendientes, icon: 'chat_bubble' },
+      { label: 'Pendientes', total: summary.pendientes, icon: 'schedule' },
     ];
   });
 
@@ -251,7 +248,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   }
 
   onEdit(item: PersonalItem): void {
-    console.log('Editar', item);
+    this.router.navigate(['/personal-registrado', 'editar', item.id]);
   }
 
   onDelete(item: PersonalItem): void {

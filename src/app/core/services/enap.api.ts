@@ -34,6 +34,13 @@ export class EnapApi {
       .pipe(catchError(this.handleError));
   }
 
+  /** PATCH para actualizaciones parciales (p. ej. multipart) */
+  patch<T>(endpoint: string, body: unknown): Observable<T> {
+    return this.http
+      .patch<T>(`${this.baseUrl}${endpoint}`, body, { withCredentials: true })
+      .pipe(catchError(this.handleError));
+  }
+
   /** DELETE para eliminar recursos */
   delete<T>(endpoint: string): Observable<T> {
     return this.http

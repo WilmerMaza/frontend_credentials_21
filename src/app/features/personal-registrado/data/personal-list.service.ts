@@ -1,11 +1,13 @@
 import { HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
-import { catchError, map, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, map, Observable, of, tap } from 'rxjs';
 import { EnapApi } from '../../../core/services/enap.api';
+import { ValidationService } from '../../../core/services/validation.service';
 import { BYPASS_SPINNER } from '../../../core/interceptors/loading.interceptor';
-import type { RegistrationPayload } from '../../../core/services/registration.service';
+import { buildFullName, type RegistrationPayload } from '../../../core/services/registration.service';
 import {
   type CredentialApiResponse,
+  type CredentialStatusSummary,
   type PaginatedCredentialsResponse,
   type PersonalItem,
   getCredentialTypeLabel,
@@ -22,6 +24,11 @@ export class PersonalListService {
   private readonly _currentPage = signal<number>(1);
   private readonly _pageSize = signal<number>(10);
   private readonly _totalPages = signal<number>(1);
+  private readonly _summary = signal<CredentialStatusSummary>({
+    activas: 0,
+    inactivas: 0,
+    pendientes: 0,
+  });
 
   /** Señales públicas de solo lectura */
   readonly listSignal  = this._list.asReadonly();
@@ -32,8 +39,12 @@ export class PersonalListService {
   readonly currentPage = this._currentPage.asReadonly();
   readonly pageSize = this._pageSize.asReadonly();
   readonly totalPages = this._totalPages.asReadonly();
+  readonly summary = this._summary.asReadonly();
 
-  constructor(private enap: EnapApi) {}
+  constructor(
+    private enap: EnapApi,
+    private validationService: ValidationService,
+  ) {}
 
   /**
    * GET /credentials
@@ -105,50 +116,33 @@ export class PersonalListService {
     return this._list().some((item) => normalizeEmail(item.correo) === normalized);
   }
 
+  /** Comprueba si la identificación ya existe en la lista cargada en memoria. */
+  hasIdentityInCache(identityNumber: string): boolean {
+    const normalized = normalizeIdentityNumber(identityNumber);
+    if (!normalized) return false;
+    return this._list().some(
+      (item) => normalizeIdentityNumber(item.identificacion) === normalized,
+    );
+  }
+
   /**
    * Verifica en el API si el correo institucional ya está registrado.
    * El backend puede devolver 500 genérico por violación unique en Prisma.
    */
+  /** GET /validations/email — con caché local de la lista cargada. */
   checkEmailExists(email: string): Observable<boolean> {
-    const normalized = normalizeEmail(email);
-    if (!normalized) return of(false);
+    if (!email.trim()) return of(false);
     if (this.hasEmailInCache(email)) return of(true);
 
-    const context = new HttpContext().set(BYPASS_SPINNER, true);
-
-    return this.enap
-      .get<PaginatedCredentialsResponse>(
-        '/credentials',
-        new HttpParams().set('page', '1').set('limit', '1'),
-        context,
-      )
-      .pipe(
-        switchMap((first) => {
-          const total = Math.max(first.total ?? 0, first.data.length);
-          if (total === 0) return of(false);
-
-          const limit = Math.min(total, 5000);
-          if (limit <= first.data.length) {
-            return of(this.emailExistsInResponses(first.data, normalized));
-          }
-
-          return this.enap
-            .get<PaginatedCredentialsResponse>(
-              '/credentials',
-              new HttpParams().set('page', '1').set('limit', String(limit)),
-              context,
-            )
-            .pipe(map((response) => this.emailExistsInResponses(response.data, normalized)));
-        }),
-        catchError(() => of(false)),
-      );
+    return this.validationService.checkEmailExists(email);
   }
 
-  private emailExistsInResponses(
-    rows: CredentialApiResponse[],
-    normalizedEmail: string,
-  ): boolean {
-    return rows.some((row) => normalizeEmail(row.institutionalEmail) === normalizedEmail);
+  /** GET /validations/identity — con caché local de la lista cargada. */
+  checkIdentityNumberExists(identityNumber: string): Observable<boolean> {
+    if (!identityNumber.trim()) return of(false);
+    if (this.hasIdentityInCache(identityNumber)) return of(true);
+
+    return this.validationService.checkIdentityExists(identityNumber);
   }
 
   /**
@@ -158,7 +152,7 @@ export class PersonalListService {
   payloadToPersonalItem(payload: RegistrationPayload): PersonalItem {
     const common = payload.common ?? {};
     const details = payload.details ?? {};
-    const fullName = String(common['fullName'] ?? 'Sin nombre');
+    const fullName = buildFullName(common as RegistrationPayload['common']) || 'Sin nombre';
     const idNumber = String(common['idNumber'] ?? '');
     const year = new Date().getFullYear();
     const id = `new-${Date.now()}`;
@@ -201,11 +195,18 @@ export class PersonalListService {
     this._currentPage.set(response.page);
     this._pageSize.set(response.limit);
     this._totalPages.set(response.totalPages);
+    if (response.summary) {
+      this._summary.set(response.summary);
+    }
   }
 }
 
 function normalizeEmail(email: string | null | undefined): string {
   return (email ?? '').trim().toLowerCase();
+}
+
+function normalizeIdentityNumber(value: string | null | undefined): string {
+  return (value ?? '').replace(/[\s.\-]/g, '').trim().toLowerCase();
 }
 
 function formatDate(d: Date): string {

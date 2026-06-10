@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   afterNextRender,
+  DestroyRef,
   ElementRef,
   EnvironmentInjector,
   inject,
@@ -9,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import Swal from 'sweetalert2';
 
@@ -20,32 +22,52 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
-import { firstValueFrom } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
 import {
   mapCredentialToPersonalItem,
   type CredentialApiResponse,
 } from '../personal-registrado/models/personal-item.model';
 import { RegistrationService, type RegistrationPayload } from '../../core/services/registration.service';
+import { ValidationService } from '../../core/services/validation.service';
 import { CredentialPdfService } from '../../core/services/credential-pdf.service';
 import { MailService } from '../../core/services/mail.service';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { buildCredentialPdfData } from '../credential-view/credential-mapper';
+import type { PersonalItemWithExtras } from '../credential-view/credential-mapper';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
 import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
 import {
   buildDuplicateEmailAlert,
   getRegistrationErrorAlert,
 } from '../../shared/utils/registration-error.utils';
+import {
+  getCameraErrorAlert,
+  getCameraSupportInfo,
+  getNativeCaptureFallbackAlert,
+} from '../../shared/utils/camera-support.utils';
+import {
+  type AvailabilityStatus,
+  digitsOnlyValidator,
+  institutionalEmailValidator,
+  isIdentityReadyForLookup,
+  isValidEmailFormat,
+  patchDuplicateError,
+  sanitizeDigitsInput,
+} from '../../shared/utils/registration-validation.utils';
 
-import { InterEscuelas } from './components/forms/inter-escuelas/inter-escuelas';
-import { Militar } from './components/forms/militar/militar';
+import { CredentialTypeService } from '../../core/services/credential-type.service';
+import type {
+  CredentialTypeApiResponse,
+  CredentialTypeSchema,
+} from '../../core/models/credential-type.model';
+import { DynamicCredentialForm } from './components/forms/dynamic-credential-form/dynamic-credential-form';
 
 const REGISTRATION_DRAFT_KEY = 'registration_draft';
 
-type RegistrationType = 'militar' | 'civil' | 'inter-escuelas';
+type RegistrationType = string;
 type IdType = 'cc' | 'ti' | 'ce' | 'pasaporte';
 
 type IdTypeOption = { value: IdType; label: string };
@@ -69,8 +91,7 @@ type IdTypeOption = { value: IdType; label: string };
     MatDatepickerModule,
 
     BreadcrumbComponent,
-    InterEscuelas,
-    Militar,
+    DynamicCredentialForm,
   ],
 })
 export class Registration implements OnDestroy {
@@ -79,9 +100,12 @@ export class Registration implements OnDestroy {
   private readonly layoutLoading = inject(LayoutLoadingService);
   private readonly registrationService = inject(RegistrationService);
   private readonly personalListService = inject(PersonalListService);
+  private readonly validationService = inject(ValidationService);
   private readonly credentialPdfService = inject(CredentialPdfService);
   private readonly mailService = inject(MailService);
   private readonly environmentInjector = inject(EnvironmentInjector);
+  private readonly credentialTypeService = inject(CredentialTypeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private static loadDraft(): Record<string, unknown> | null {
     if (typeof window === 'undefined') return null;
@@ -97,6 +121,9 @@ export class Registration implements OnDestroy {
   submitting = signal(false);
   selectedPhoto?: File;
   photoPreviewUrl = signal<string | null>(null);
+  photoRequired = signal(false);
+  emailAvailability = signal<AvailabilityStatus>('idle');
+  identityAvailability = signal<AvailabilityStatus>('idle');
   identitySectionExpanded = signal(true);
   detailsSectionExpanded = signal(true);
   showCameraOverlay = signal(false);
@@ -106,11 +133,9 @@ export class Registration implements OnDestroy {
   private cameraInputRef = viewChild<ElementRef<HTMLInputElement>>('cameraInput');
   private cameraStream: MediaStream | null = null;
 
-  readonly types: Array<{ value: RegistrationType; label: string }> = [
-    { value: 'militar', label: 'Personal Militar' },
-    { value: 'civil', label: 'Personal Civil' },
-    { value: 'inter-escuelas', label: 'Inter-escuelas' },
-  ];
+  readonly types = signal<Array<{ value: RegistrationType; label: string }>>([]);
+  readonly activeSchema = signal<CredentialTypeSchema | null>(null);
+  private credentialTypes = signal<CredentialTypeApiResponse[]>([]);
 
   readonly idTypes: IdTypeOption[] = [
     { value: 'cc', label: 'Cédula de ciudadanía (CC)' },
@@ -119,6 +144,8 @@ export class Registration implements OnDestroy {
     { value: 'pasaporte', label: 'Pasaporte' },
   ];
 
+  readonly minValidUntilDate = new Date();
+
   // ✅ Form: type + common + details
   readonly registrationForm = this.fb.group({
     type: this.fb.control<RegistrationType>('militar', {
@@ -126,12 +153,16 @@ export class Registration implements OnDestroy {
     }),
 
     common: this.fb.group({
-      fullName:           this.fb.control('', { validators: [Validators.required] }),
+      firstName:          this.fb.control('', { validators: [Validators.required] }),
+      lastName:           this.fb.control('', { validators: [Validators.required] }),
       idType:             this.fb.control<IdType | ''>('', { validators: [Validators.required] }),
-      idNumber:           this.fb.control('', { validators: [Validators.required] }),
+      idNumber:           this.fb.control('', { validators: [Validators.required, digitsOnlyValidator(false)] }),
       birthDate:          this.fb.control<Date | null>(null, { validators: [Validators.required] }),
-      institutionalEmail: this.fb.control('', { validators: [Validators.required, Validators.email] }),
-      phone:              this.fb.control('', { validators: [] }),
+      validUntil:         this.fb.control<Date | null>(null, { validators: [Validators.required] }),
+      institutionalEmail: this.fb.control('', {
+        validators: [Validators.required, institutionalEmailValidator()],
+      }),
+      phone:              this.fb.control('', { validators: [digitsOnlyValidator()] }),
     }),
 
     details: this.fb.group({}),
@@ -143,7 +174,7 @@ export class Registration implements OnDestroy {
 
   getTypeLabel(): string {
     const v = this.registrationForm.controls.type.value;
-    return this.types.find((t) => t.value === v)?.label ?? v ?? '';
+    return this.types().find((t) => t.value === v)?.label ?? v ?? '';
   }
 
   toggleIdentitySection(): void {
@@ -158,11 +189,187 @@ export class Registration implements OnDestroy {
   onTypeChange(next: RegistrationType): void {
     Object.keys(this.detailsGroup.controls).forEach((k) => this.detailsGroup.removeControl(k));
     this.detailsGroup.reset();
+    const selected = this.credentialTypes().find((type) => type.code === next);
+    this.activeSchema.set(selected?.schema ?? { fields: [] });
   }
 
   constructor() {
     this.layoutLoading.setLoading(false);
+    void this.loadCredentialTypes();
     this.restoreDraftIfExists();
+    this.setupRealtimeValidators();
+  }
+
+  canSubmitForm(): boolean {
+    if (this.submitting()) return false;
+    if (!this.selectedPhoto) return false;
+    if (this.registrationForm.invalid || this.detailsGroup.invalid) return false;
+    if (this.emailAvailability() === 'checking' || this.identityAvailability() === 'checking') {
+      return false;
+    }
+
+    const common = this.registrationForm.controls.common.controls;
+    const email = String(common.institutionalEmail.value ?? '').trim();
+    const idNumber = String(common.idNumber.value ?? '').trim();
+
+    if (common.institutionalEmail.hasError('duplicateEmail')) return false;
+    if (common.idNumber.hasError('duplicateIdentity')) return false;
+    if (!isValidEmailFormat(email) || this.emailAvailability() !== 'available') return false;
+    if (!isIdentityReadyForLookup(idNumber) || this.identityAvailability() !== 'available') {
+      return false;
+    }
+
+    return true;
+  }
+
+  isEmailVerified(): boolean {
+    const email = String(
+      this.registrationForm.controls.common.controls.institutionalEmail.value ?? '',
+    ).trim();
+    return isValidEmailFormat(email) && this.emailAvailability() === 'available';
+  }
+
+  isIdentityVerified(): boolean {
+    const idNumber = String(
+      this.registrationForm.controls.common.controls.idNumber.value ?? '',
+    ).trim();
+    return isIdentityReadyForLookup(idNumber) && this.identityAvailability() === 'available';
+  }
+
+  getSubmitBlockers(): string[] {
+    if (this.canSubmitForm()) return [];
+
+    const blockers: string[] = [];
+
+    if (this.submitting()) {
+      blockers.push('Procesando registro...');
+      return blockers;
+    }
+
+    if (!this.selectedPhoto) {
+      blockers.push('Foto para credencial');
+    }
+
+    const typeCtrl = this.registrationForm.controls.type;
+    if (typeCtrl.invalid) {
+      blockers.push(this.fieldLabels['type'] ?? 'Tipo de registro');
+    }
+
+    const common = this.registrationForm.controls.common.controls;
+
+    for (const key of ['firstName', 'lastName', 'idType', 'birthDate', 'validUntil'] as const) {
+      if (common[key].invalid) {
+        blockers.push(this.fieldLabels[key] ?? key);
+      }
+    }
+
+    const idCtrl = common.idNumber;
+    if (idCtrl.hasError('duplicateIdentity')) {
+      blockers.push('Número de identificación ya registrado');
+    } else if (this.identityAvailability() === 'checking') {
+      blockers.push('Verificando número de identificación...');
+    } else if (idCtrl.hasError('required')) {
+      blockers.push('Número de identificación');
+    } else if (idCtrl.hasError('digitsOnly')) {
+      blockers.push('Número de identificación (solo dígitos)');
+    } else if (!isIdentityReadyForLookup(String(idCtrl.value ?? ''))) {
+      blockers.push('Número de identificación (mínimo 5 dígitos)');
+    } else if (this.identityAvailability() !== 'available') {
+      blockers.push('Espere la verificación del número de identificación');
+    }
+
+    const emailCtrl = common.institutionalEmail;
+    if (emailCtrl.hasError('duplicateEmail')) {
+      blockers.push('Correo institucional ya registrado');
+    } else if (this.emailAvailability() === 'checking') {
+      blockers.push('Verificando correo institucional...');
+    } else if (emailCtrl.hasError('required')) {
+      blockers.push('Correo institucional');
+    } else if (emailCtrl.hasError('email')) {
+      blockers.push('Correo institucional con formato válido');
+    } else if (!isValidEmailFormat(String(emailCtrl.value ?? ''))) {
+      blockers.push('Correo institucional con formato válido');
+    } else if (this.emailAvailability() !== 'available') {
+      blockers.push('Espere la verificación del correo institucional');
+    }
+
+    if (common.phone.invalid) {
+      blockers.push('Teléfono (solo dígitos)');
+    }
+
+    for (const field of this.activeSchema()?.fields ?? []) {
+      const control = this.detailsGroup.controls[field.name];
+      if (control?.invalid) {
+        blockers.push(field.label);
+      }
+    }
+
+    return blockers;
+  }
+
+  private setupRealtimeValidators(): void {
+    const emailCtrl = this.registrationForm.controls.common.controls.institutionalEmail;
+    const idCtrl = this.registrationForm.controls.common.controls.idNumber;
+
+    emailCtrl.valueChanges
+      .pipe(
+        debounceTime(600),
+        distinctUntilChanged(),
+        tap(() => {
+          this.emailAvailability.set('idle');
+          patchDuplicateError(emailCtrl, 'duplicateEmail', false);
+        }),
+        filter((value) => isValidEmailFormat(value)),
+        tap(() => this.emailAvailability.set('checking')),
+        switchMap((value) => this.validationService.checkEmailExists(value)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((exists) => {
+        this.emailAvailability.set(exists ? 'duplicate' : 'available');
+        patchDuplicateError(emailCtrl, 'duplicateEmail', exists);
+      });
+
+    idCtrl.valueChanges
+      .pipe(
+        debounceTime(600),
+        distinctUntilChanged(),
+        tap(() => {
+          this.identityAvailability.set('idle');
+          patchDuplicateError(idCtrl, 'duplicateIdentity', false);
+        }),
+        filter((value) => isIdentityReadyForLookup(value)),
+        tap(() => this.identityAvailability.set('checking')),
+        switchMap((value) => this.validationService.checkIdentityExists(value)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((exists) => {
+        this.identityAvailability.set(exists ? 'duplicate' : 'available');
+        patchDuplicateError(idCtrl, 'duplicateIdentity', exists);
+      });
+  }
+
+  private async loadCredentialTypes(): Promise<void> {
+    try {
+      const types = await firstValueFrom<CredentialTypeApiResponse[]>(
+        this.credentialTypeService.list(),
+      );
+      this.credentialTypes.set(types);
+      this.types.set(
+        types.map((type) => ({
+          value: type.code,
+          label: type.name,
+        })),
+      );
+
+      const currentType = this.registrationForm.controls.type.value;
+      if (!types.some((type) => type.code === currentType) && types[0]) {
+        this.registrationForm.controls.type.setValue(types[0].code);
+      }
+
+      this.onTypeChange(this.registrationForm.controls.type.value);
+    } catch (error) {
+      console.error('No se pudieron cargar los tipos de credencial', error);
+    }
   }
 
   private restoreDraftIfExists(): void {
@@ -179,14 +386,22 @@ export class Registration implements OnDestroy {
 
     if (common) {
       const birthDateVal = common['birthDate'];
+      const validUntilVal = common['validUntil'];
       const birthDate =
         typeof birthDateVal === 'string' && birthDateVal ? new Date(birthDateVal) : null;
+      const validUntil =
+        typeof validUntilVal === 'string' && validUntilVal ? new Date(validUntilVal) : null;
+      const legacyFullName = (common['fullName'] as string) ?? '';
       this.registrationForm.patchValue({
         common: {
-          fullName: (common['fullName'] as string) ?? '',
+          firstName: (common['firstName'] as string) ?? legacyFullName,
+          lastName: (common['lastName'] as string) ?? '',
           idType: (common['idType'] as IdType | '') ?? '',
           idNumber: (common['idNumber'] as string) ?? '',
           birthDate,
+          validUntil,
+          institutionalEmail: (common['institutionalEmail'] as string) ?? '',
+          phone: (common['phone'] as string) ?? '',
         },
       });
     }
@@ -204,25 +419,27 @@ export class Registration implements OnDestroy {
     if (url) URL.revokeObjectURL(url);
   }
 
+  onDigitsOnlyInput(event: Event, field: 'idNumber' | 'phone'): void {
+    const input = event.target as HTMLInputElement;
+    const digits = sanitizeDigitsInput(input.value);
+    if (input.value !== digits) {
+      input.value = digits;
+    }
+    this.registrationForm.controls.common.controls[field].setValue(digits);
+  }
+
   openCamera(): void {
-    if (this.canUseMediaDevices()) {
+    const support = getCameraSupportInfo();
+    if (support.canUseGetUserMedia) {
       void this.startCameraStream();
       return;
     }
-    void this.openNativeCameraPicker();
+    void this.openNativeCameraPicker(support);
   }
 
   closeCamera(): void {
     this.stopCameraStream();
     this.showCameraOverlay.set(false);
-  }
-
-  private canUseMediaDevices(): boolean {
-    return (
-      typeof window !== 'undefined' &&
-      window.isSecureContext &&
-      typeof navigator.mediaDevices?.getUserMedia === 'function'
-    );
   }
 
   private waitNextRender(): Promise<void> {
@@ -231,42 +448,60 @@ export class Registration implements OnDestroy {
     });
   }
 
-  private async openNativeCameraPicker(): Promise<void> {
-    if (!this.identitySectionExpanded()) {
-      this.identitySectionExpanded.set(true);
-      await this.waitNextRender();
-    }
-
+  private async openNativeCameraPicker(support = getCameraSupportInfo()): Promise<void> {
     const input = this.cameraInputRef()?.nativeElement;
     if (!input) {
+      const alert = getCameraErrorAlert(
+        new DOMException('Input de cámara no disponible', 'NotFoundError'),
+        support,
+      );
       void Swal.fire({
-        icon: 'warning',
-        title: 'No se pudo abrir la cámara',
-        text: 'Usa "Subir archivo" o abre la app con HTTPS para usar la cámara en el navegador.',
+        icon: alert.icon,
+        title: alert.title,
+        text: alert.text,
         confirmButtonColor: '#0c2e57',
       });
       return;
     }
 
+    // Abrir el selector en el mismo gesto del click; no mostrar modales antes.
     input.value = '';
     input.click();
+
+    if (!support.canUseGetUserMedia) {
+      const hint = getNativeCaptureFallbackAlert(support);
+      void Swal.fire({
+        icon: hint.icon,
+        title: hint.title,
+        text: hint.text,
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 7000,
+        timerProgressBar: true,
+      });
+    }
   }
 
   async startCameraStream(): Promise<void> {
-    this.showCameraOverlay.set(true);
+    const support = getCameraSupportInfo();
 
     try {
-      await this.waitNextRender();
-
+      // Solicitar permiso de inmediato, dentro del gesto del usuario (click).
+      // Esperar renders antes de getUserMedia hace que Chrome/Safari bloqueen el popup.
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'user' },
           width: { ideal: 640 },
           height: { ideal: 480 },
         },
+        audio: false,
       });
 
       this.cameraStream = stream;
+      this.showCameraOverlay.set(true);
+      await this.waitNextRender();
+
       const video = this.cameraVideoRef()?.nativeElement;
       if (video) {
         video.srcObject = stream;
@@ -277,17 +512,11 @@ export class Registration implements OnDestroy {
       this.showCameraOverlay.set(false);
       this.stopCameraStream();
 
-      const input = this.cameraInputRef()?.nativeElement;
-      if (input) {
-        input.value = '';
-        input.click();
-        return;
-      }
-
+      const alert = getCameraErrorAlert(err, support);
       void Swal.fire({
-        icon: 'error',
-        title: 'Cámara no disponible',
-        text: 'No se pudo acceder a la cámara. Puedes subir una foto desde tu dispositivo.',
+        icon: alert.icon,
+        title: alert.title,
+        text: alert.text,
         confirmButtonColor: '#0c2e57',
       });
     }
@@ -320,6 +549,7 @@ export class Registration implements OnDestroy {
         const prev = this.photoPreviewUrl();
         if (prev) URL.revokeObjectURL(prev);
         this.photoPreviewUrl.set(URL.createObjectURL(blob));
+        this.photoRequired.set(false);
         this.closeCamera();
       },
       'image/jpeg',
@@ -361,12 +591,14 @@ export class Registration implements OnDestroy {
     const prev = this.photoPreviewUrl();
     if (prev) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(URL.createObjectURL(file));
+    this.photoRequired.set(false);
     input.value = '';
   }
 
   async onSaveDraft(): Promise<void> {
     const raw = this.registrationForm.getRawValue();
     const birthDate = raw.common.birthDate;
+    const validUntil = raw.common.validUntil;
     const draft = {
       type: raw.type,
       common: {
@@ -375,6 +607,10 @@ export class Registration implements OnDestroy {
           birthDate != null && typeof birthDate === 'object' && 'toISOString' in birthDate
             ? (birthDate as Date).toISOString()
             : birthDate,
+        validUntil:
+          validUntil != null && typeof validUntil === 'object' && 'toISOString' in validUntil
+            ? (validUntil as Date).toISOString()
+            : validUntil,
       },
       details: raw.details as Record<string, unknown>,
     };
@@ -394,10 +630,12 @@ export class Registration implements OnDestroy {
     this.registrationForm.reset({
       type: 'militar',
       common: {
-        fullName: '',
+        firstName: '',
+        lastName: '',
         idType: '',
         idNumber: '',
         birthDate: null,
+        validUntil: null,
         institutionalEmail: '',
         phone: '',
       },
@@ -409,6 +647,9 @@ export class Registration implements OnDestroy {
     const prev = this.photoPreviewUrl();
     if (prev) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(null);
+    this.photoRequired.set(false);
+    this.emailAvailability.set('idle');
+    this.identityAvailability.set('idle');
   }
 
   async onSubmit(): Promise<void> {
@@ -416,6 +657,11 @@ export class Registration implements OnDestroy {
 
     this.registrationForm.markAllAsTouched();
     this.detailsGroup.markAllAsTouched();
+
+    if (!this.selectedPhoto) {
+      this.photoRequired.set(true);
+      this.identitySectionExpanded.set(true);
+    }
 
     const missing = this.collectMissingFields();
     if (missing.length > 0) {
@@ -432,11 +678,37 @@ export class Registration implements OnDestroy {
 
     const raw = this.registrationForm.getRawValue();
     const email = raw.common.institutionalEmail?.trim();
+    const idNumber = raw.common.idNumber?.trim();
+
+    const emailCtrl = this.registrationForm.controls.common.controls.institutionalEmail;
+    const idCtrl = this.registrationForm.controls.common.controls.idNumber;
 
     if (email) {
-      const exists = await firstValueFrom(this.personalListService.checkEmailExists(email));
-      if (exists) {
+      const emailExists = await firstValueFrom(this.validationService.checkEmailExists(email));
+      if (emailExists) {
+        emailCtrl.markAsTouched();
+        patchDuplicateError(emailCtrl, 'duplicateEmail', true);
+        this.emailAvailability.set('duplicate');
         void this.showRegistrationAlert(buildDuplicateEmailAlert(email));
+        return;
+      }
+    }
+
+    if (idNumber) {
+      const identityExists = await firstValueFrom(
+        this.validationService.checkIdentityExists(idNumber),
+      );
+      if (identityExists) {
+        idCtrl.markAsTouched();
+        patchDuplicateError(idCtrl, 'duplicateIdentity', true);
+        this.identityAvailability.set('duplicate');
+        void Swal.fire({
+          icon: 'error',
+          title: 'Identificación ya registrada',
+          text: `El número ${idNumber} ya está asociado a otra credencial. Verifique el dato o consulte el personal registrado.`,
+          confirmButtonColor: '#163665',
+        });
+        this.focusIdNumber();
         return;
       }
     }
@@ -452,7 +724,7 @@ export class Registration implements OnDestroy {
     this.submitting.set(true);
     this.registrationService.submitRegistration(payload, this.selectedPhoto).subscribe({
       next: (created) => {
-        void this.handleRegistrationSuccess(created, raw.common.institutionalEmail);
+        void this.handleRegistrationSuccess(created, raw.common);
       },
       error: (err) => {
         void this.showRegistrationError(err, email);
@@ -465,7 +737,7 @@ export class Registration implements OnDestroy {
     let alert = getRegistrationErrorAlert(err, email);
 
     if (alert.title === 'Error al registrar' && email) {
-      const exists = await firstValueFrom(this.personalListService.checkEmailExists(email));
+      const exists = await firstValueFrom(this.validationService.checkEmailExists(email));
       if (exists) {
         alert = buildDuplicateEmailAlert(email);
       }
@@ -493,10 +765,12 @@ export class Registration implements OnDestroy {
 
   private readonly fieldLabels: Record<string, string> = {
     type: 'Tipo de registro',
-    fullName: 'Nombre completo',
+    firstName: 'Nombre',
+    lastName: 'Apellido',
     idType: 'Tipo de identificación',
     idNumber: 'Número de identificación',
     birthDate: 'Fecha de nacimiento',
+    validUntil: 'Vigencia de la credencial',
     institutionalEmail: 'Correo institucional',
     force: 'Fuerza',
     grades: 'Grado',
@@ -505,41 +779,20 @@ export class Registration implements OnDestroy {
   };
 
   private collectMissingFields(): string[] {
-    const missing: string[] = [];
-
-    const typeCtrl = this.registrationForm.controls.type;
-    if (typeCtrl.invalid) {
-      missing.push(this.fieldLabels['type'] ?? 'Tipo de registro');
-    }
-
-    const common = this.registrationForm.controls.common;
-    for (const [key, control] of Object.entries(common.controls)) {
-      if (control.invalid) {
-        missing.push(this.fieldLabels[key] ?? key);
-      }
-    }
-
-    for (const [key, control] of Object.entries(this.detailsGroup.controls)) {
-      if (control.invalid) {
-        missing.push(this.fieldLabels[key] ?? key);
-      }
-    }
-
-    if (!this.selectedPhoto) {
-      missing.push('Foto para credencial');
-    }
-
-    return missing;
+    return this.getSubmitBlockers();
   }
 
   private expandSectionsForMissing(missing: string[]): void {
     const identityFields = new Set([
       'Tipo de registro',
-      'Nombre completo',
+      'Nombre',
+      'Apellido',
       'Tipo de identificación',
       'Número de identificación',
       'Fecha de nacimiento',
+      'Vigencia de la credencial',
       'Correo institucional',
+      'Teléfono',
       'Foto para credencial',
     ]);
 
@@ -547,27 +800,38 @@ export class Registration implements OnDestroy {
       this.identitySectionExpanded.set(true);
     }
 
-    const detailsFields = new Set(['Fuerza', 'Grado', 'Disciplina o deporte', 'Curso']);
-    if (missing.some((f) => detailsFields.has(f))) {
+    const dynamicLabels = new Set((this.activeSchema()?.fields ?? []).map((field) => field.label));
+    if (missing.some((f) => dynamicLabels.has(f))) {
       this.detailsSectionExpanded.set(true);
     }
   }
 
   private focusInstitutionalEmail(): void {
+    this.focusField('input[formcontrolname="institutionalEmail"]');
+  }
+
+  private focusIdNumber(): void {
+    this.focusField('input[formcontrolname="idNumber"]');
+  }
+
+  private focusField(selector: string): void {
     if (typeof document === 'undefined') return;
     this.identitySectionExpanded.set(true);
-    const el = document.querySelector<HTMLInputElement>(
-      'input[formcontrolname="institutionalEmail"]',
-    );
+    const el = document.querySelector<HTMLInputElement>(selector);
     el?.focus();
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   private async handleRegistrationSuccess(
     created: CredentialApiResponse,
-    institutionalEmail: string,
+    common: RegistrationPayload['common'],
   ): Promise<void> {
-    const newItem = mapCredentialToPersonalItem(created);
+    const institutionalEmail = String(common.institutionalEmail ?? '').trim();
+    const newItem: PersonalItemWithExtras = {
+      ...mapCredentialToPersonalItem(created),
+      emision: this.formatDisplayDate(new Date()),
+      validoHasta: this.formatDisplayDate(common.validUntil),
+    };
     this.personalListService.addItem(newItem);
 
     if (typeof window !== 'undefined') {
@@ -629,5 +893,16 @@ export class Registration implements OnDestroy {
 
   navigateTo(path: string): void {
     this.navigationService.navigate(path);
+  }
+
+  private formatDisplayDate(value: Date | string | null | undefined): string {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   }
 }

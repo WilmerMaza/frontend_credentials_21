@@ -1,7 +1,9 @@
+import type { CredentialStatusCode } from '../../shared/utils/credential-status.utils';
+
 /**
  * Estructura de credencial digital según el tipo de registro.
  * Mantiene datos comunes y expone campos dinámicos para no forzar
- * registros civiles o inter-escuelas dentro de una forma militar.
+ * registros civiles o cadetes dentro de una forma militar.
  */
 export interface CredentialOrg {
   nombre: string;
@@ -27,7 +29,7 @@ export interface CredentialPersona {
 export interface CredentialTypeInfo {
   codigo: string;
   nombre: string;
-  variante: 'militar' | 'inter-escuelas' | 'civil';
+  variante: 'militar' | 'cadetes' | 'civil';
 }
 
 export interface CredentialField {
@@ -57,7 +59,7 @@ export interface CredentialData {
   persona: CredentialPersona;
   tipoRegistro: CredentialTypeInfo;
   resumen: string;
-  estado: string;
+  estado: CredentialStatusCode;
   camposPrincipales: CredentialField[];
   camposSecundarios: CredentialField[];
   contacto: CredentialContacto;

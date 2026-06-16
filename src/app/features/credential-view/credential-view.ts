@@ -30,6 +30,10 @@ import {
 import { CredentialPdfService } from '../../core/services/credential-pdf.service';
 import { MailService } from '../../core/services/mail.service';
 import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
+import {
+  getCredentialStatusBadgeClass,
+  getCredentialStatusLabel,
+} from '../../shared/utils/credential-status.utils';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
 const DEFAULT_PHOTO = 'https://i.imgur.com/8Km9tLL.png';
@@ -64,6 +68,9 @@ export class CredentialView implements OnInit, OnDestroy {
     { label: 'Personal Registrado', url: '/personal-registrado' },
     { label: 'Visualización de Credencial' },
   ];
+
+  readonly getCredentialStatusLabel = getCredentialStatusLabel;
+  readonly getCredentialStatusBadgeClass = getCredentialStatusBadgeClass;
 
   readonly logoUrl = computed(() => {
     const c = this.credential();

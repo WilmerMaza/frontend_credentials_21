@@ -1,4 +1,9 @@
-export type CredentialTypeCode = 'militar' | 'civil' | 'inter-escuelas' | string;
+import {
+  normalizeCredentialStatus,
+  type CredentialStatusCode,
+} from '../../../shared/utils/credential-status.utils';
+
+export type CredentialTypeCode = 'militar' | 'civil' | 'cadetes' | 'inter-escuelas' | string;
 
 export type CredentialDetails = Record<string, unknown>;
 
@@ -53,7 +58,7 @@ export interface PersonalItem {
   tipoRegistroCodigo: CredentialTypeCode;
   tipoRegistroNombre: string;
   detallesRegistro: CredentialDetails;
-  estado: 'activo' | 'inactivo' | 'pendiente';
+  estado: CredentialStatusCode;
   correo: string;
   fechaNacimiento?: string;
   fechaIngreso: string;
@@ -61,17 +66,8 @@ export interface PersonalItem {
   tipoIdentificacion?: string;
 }
 
-function mapApiStatus(status?: string | null): PersonalItem['estado'] {
-  switch ((status ?? 'ACTIVE').toUpperCase()) {
-    case 'PENDING':
-      return 'pendiente';
-    case 'EXPIRED':
-    case 'REVOKED':
-    case 'SUSPENDED':
-      return 'inactivo';
-    default:
-      return 'activo';
-  }
+function mapApiStatus(status?: string | null): CredentialStatusCode {
+  return normalizeCredentialStatus(status);
 }
 
 /** Convierte la respuesta del API al modelo interno. */
@@ -82,8 +78,10 @@ export function mapCredentialToPersonalItem(c: CredentialApiResponse): PersonalI
     ...metadata,
   };
   const tipoRegistroCodigo = String(c.credentialTypeCode ?? 'militar');
-  const tipoRegistroNombre =
-    nonEmptyString(c.credentialTypeName) ?? getCredentialTypeLabel(tipoRegistroCodigo);
+  const tipoRegistroNombre = resolveCredentialDisplayName(
+    tipoRegistroCodigo,
+    c.credentialTypeName,
+  );
   const rango = pickFirstString(
     metadata['grades'],
     metadata['rank'],
@@ -122,9 +120,20 @@ export function mapCredentialToPersonalItem(c: CredentialApiResponse): PersonalI
 
 export function getCredentialTypeLabel(typeCode: string): string {
   const normalized = normalizeTypeCode(typeCode);
-  if (normalized === 'inter-escuelas') return 'Inter-escuelas';
+  if (normalized === 'cadetes' || normalized === 'inter-escuelas') return 'Cadetes';
   if (normalized === 'civil') return 'Personal Civil';
   return 'Personal Militar';
+}
+
+export function resolveCredentialDisplayName(
+  typeCode: string,
+  apiName?: string | null,
+): string {
+  const normalized = normalizeTypeCode(typeCode);
+  if (['militar', 'civil', 'cadetes', 'inter-escuelas'].includes(normalized)) {
+    return getCredentialTypeLabel(typeCode);
+  }
+  return nonEmptyString(apiName) ?? typeCode;
 }
 
 export function normalizeTypeCode(typeCode: string): string {

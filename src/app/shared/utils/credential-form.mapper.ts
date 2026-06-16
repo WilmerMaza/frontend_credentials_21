@@ -1,4 +1,5 @@
 import type { CredentialApiResponse } from '../../features/personal-registrado/models/personal-item.model';
+import { normalizeCadeteDetailValues } from './cadete-schema.utils';
 type IdType = 'cc' | 'ti' | 'ce' | 'pasaporte';
 
 export interface RegistrationFormValues {
@@ -100,7 +101,7 @@ export function mapCredentialToEditForm(credential: CredentialApiResponse): {
         institutionalEmail: String(credential.institutionalEmail ?? '').trim(),
         phone: phone || undefined,
       },
-      details: { ...metadata },
+      details: normalizeCadeteDetailValues(metadata),
     },
   };
 }
@@ -124,6 +125,6 @@ export function mapCredentialToRegistrationForm(
       institutionalEmail: String(credential.institutionalEmail ?? '').trim(),
       phone: phone || undefined,
     },
-    details: { ...metadata },
+    details: normalizeCadeteDetailValues(metadata),
   };
 }

@@ -64,6 +64,8 @@ import type {
   CredentialTypeSchema,
 } from '../../core/models/credential-type.model';
 import { DynamicCredentialForm } from './components/forms/dynamic-credential-form/dynamic-credential-form';
+import { getCredentialTypeLabel } from '../personal-registrado/models/personal-item.model';
+import { enrichCadeteSchema, isCadeteType } from '../../shared/utils/cadete-schema.utils';
 
 const REGISTRATION_DRAFT_KEY = 'registration_draft';
 
@@ -135,6 +137,7 @@ export class Registration implements OnDestroy {
 
   readonly types = signal<Array<{ value: RegistrationType; label: string }>>([]);
   readonly activeSchema = signal<CredentialTypeSchema | null>(null);
+  readonly detailsInitialValues = signal<Record<string, unknown>>({});
   private credentialTypes = signal<CredentialTypeApiResponse[]>([]);
 
   readonly idTypes: IdTypeOption[] = [
@@ -189,6 +192,7 @@ export class Registration implements OnDestroy {
   onTypeChange(next: RegistrationType): void {
     Object.keys(this.detailsGroup.controls).forEach((k) => this.detailsGroup.removeControl(k));
     this.detailsGroup.reset();
+    this.detailsInitialValues.set({});
     const selected = this.credentialTypes().find((type) => type.code === next);
     this.activeSchema.set(selected?.schema ?? { fields: [] });
   }
@@ -353,17 +357,21 @@ export class Registration implements OnDestroy {
       const types = await firstValueFrom<CredentialTypeApiResponse[]>(
         this.credentialTypeService.list(),
       );
-      this.credentialTypes.set(types);
+      const enriched = types.map((type) => ({
+        ...type,
+        schema: isCadeteType(type.code) ? enrichCadeteSchema(type.schema) : type.schema,
+      }));
+      this.credentialTypes.set(enriched);
       this.types.set(
-        types.map((type) => ({
+        enriched.map((type) => ({
           value: type.code,
-          label: type.name,
+          label: getCredentialTypeLabel(type.code) || type.name,
         })),
       );
 
       const currentType = this.registrationForm.controls.type.value;
-      if (!types.some((type) => type.code === currentType) && types[0]) {
-        this.registrationForm.controls.type.setValue(types[0].code);
+      if (!enriched.some((type) => type.code === currentType) && enriched[0]) {
+        this.registrationForm.controls.type.setValue(enriched[0].code);
       }
 
       this.onTypeChange(this.registrationForm.controls.type.value);
@@ -407,9 +415,7 @@ export class Registration implements OnDestroy {
     }
 
     if (details && Object.keys(details).length > 0) {
-      setTimeout(() => {
-        this.detailsGroup.patchValue(details);
-      }, 0);
+      this.detailsInitialValues.set(details);
     }
   }
 
@@ -765,8 +771,8 @@ export class Registration implements OnDestroy {
 
   private readonly fieldLabels: Record<string, string> = {
     type: 'Tipo de registro',
-    firstName: 'Nombre',
-    lastName: 'Apellido',
+    firstName: 'Nombres',
+    lastName: 'Apellidos',
     idType: 'Tipo de identificación',
     idNumber: 'Número de identificación',
     birthDate: 'Fecha de nacimiento',
@@ -785,8 +791,8 @@ export class Registration implements OnDestroy {
   private expandSectionsForMissing(missing: string[]): void {
     const identityFields = new Set([
       'Tipo de registro',
-      'Nombre',
-      'Apellido',
+      'Nombres',
+      'Apellidos',
       'Tipo de identificación',
       'Número de identificación',
       'Fecha de nacimiento',

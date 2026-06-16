@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { getPhotoUrl } from '../../../../shared/utils/url.utils';
+import {
+  getCredentialStatusBadgeClass,
+  getCredentialStatusLabel,
+} from '../../../../shared/utils/credential-status.utils';
 import type { PersonalItem } from '../../models/personal-item.model';
 
 @Component({
@@ -124,12 +128,13 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <td>
                   <span
                     class="pr-badge"
-                    [class.ok]="row.estado === 'activo'"
-                    [class.warn]="row.estado === 'pendiente'"
-                    [class.off]="row.estado === 'inactivo'"
+                    [class.ok]="getCredentialStatusBadgeClass(row.estado) === 'ok'"
+                    [class.warn]="getCredentialStatusBadgeClass(row.estado) === 'warn'"
+                    [class.off]="getCredentialStatusBadgeClass(row.estado) === 'off'"
+                    [class.info]="getCredentialStatusBadgeClass(row.estado) === 'info'"
                   >
                     <span class="dot"></span>
-                    {{ getEstadoLabel(row.estado) }}
+                    {{ getCredentialStatusLabel(row.estado) }}
                   </span>
                 </td>
                 <td>
@@ -231,10 +236,8 @@ export class PersonalTableDesktopComponent {
   pageChange = output<number>();
 
   readonly getPhotoUrl = getPhotoUrl;
-
-  getEstadoLabel(estado: string): string {
-    return estado === 'activo' ? 'Activo' : estado === 'pendiente' ? 'Pendiente' : 'Inactivo';
-  }
+  readonly getCredentialStatusLabel = getCredentialStatusLabel;
+  readonly getCredentialStatusBadgeClass = getCredentialStatusBadgeClass;
 
   goToPage(page: number): void {
     if (page >= 0 && page < this.totalPages()) {

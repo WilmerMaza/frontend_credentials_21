@@ -16,6 +16,7 @@ import {
   distinctUntilChanged,
   filter,
   firstValueFrom,
+  merge,
   of,
   switchMap,
   tap,
@@ -46,6 +47,7 @@ import {
   getIdTypeLabel,
 } from '../../shared/utils/credential-status.utils';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
+import { enrichCadeteSchema, isCadeteType } from '../../shared/utils/cadete-schema.utils';
 import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
 import { buildDuplicateEmailAlert } from '../../shared/utils/registration-error.utils';
 import {
@@ -101,8 +103,7 @@ export class CredentialEdit implements OnDestroy {
   selectedPhoto?: File;
   photoPreviewUrl = signal<string | null>(null);
   emailAvailability = signal<AvailabilityStatus>('idle');
-
-  readonly minValidUntilDate = new Date();
+  private readonly formStateTick = signal(0);
 
   readonly editForm = this.fb.group({
     status: this.fb.control('ACTIVE', { validators: [Validators.required] }),
@@ -132,6 +133,7 @@ export class CredentialEdit implements OnDestroy {
     }
     void this.loadCredential(id);
     this.setupEmailValidator();
+    this.setupFormStateWatcher();
   }
 
   ngOnDestroy(): void {
@@ -140,6 +142,8 @@ export class CredentialEdit implements OnDestroy {
   }
 
   canSubmit(): boolean {
+    this.formStateTick();
+
     if (this.loading() || this.submitting()) return false;
     if (this.editForm.invalid || this.detailsGroup.invalid) return false;
     if (this.emailAvailability() === 'checking') return false;
@@ -147,14 +151,80 @@ export class CredentialEdit implements OnDestroy {
     const emailCtrl = this.editForm.controls.common.controls.institutionalEmail;
     const email = String(emailCtrl.value ?? '').trim();
     if (emailCtrl.hasError('duplicateEmail')) return false;
-    if (!isValidEmailFormat(email) || this.emailAvailability() !== 'available') return false;
+    if (!isValidEmailFormat(email)) return false;
 
-    return true;
+    if (this.isEmailUnchanged(email)) return true;
+
+    return this.emailAvailability() === 'available';
   }
 
   isEmailVerified(): boolean {
     const email = String(this.editForm.controls.common.controls.institutionalEmail.value ?? '').trim();
-    return isValidEmailFormat(email) && this.emailAvailability() === 'available';
+    if (!isValidEmailFormat(email)) return false;
+    if (this.isEmailUnchanged(email)) return true;
+    return this.emailAvailability() === 'available';
+  }
+
+  getSubmitBlockers(): string[] {
+    this.formStateTick();
+
+    if (this.canSubmit()) return [];
+
+    const blockers: string[] = [];
+
+    if (this.loading()) {
+      blockers.push('Cargando credencial...');
+      return blockers;
+    }
+
+    if (this.submitting()) {
+      blockers.push('Guardando cambios...');
+      return blockers;
+    }
+
+    if (this.editForm.controls.status.invalid) {
+      blockers.push('Estado de la credencial');
+    }
+
+    const common = this.editForm.controls.common.controls;
+    const fieldLabels: Record<string, string> = {
+      firstName: 'Nombres',
+      lastName: 'Apellidos',
+      birthDate: 'Fecha de nacimiento',
+      validUntil: 'Vigencia de la credencial',
+      institutionalEmail: 'Correo institucional',
+      phone: 'Teléfono (solo dígitos)',
+    };
+
+    for (const [key, label] of Object.entries(fieldLabels)) {
+      const control = common[key as keyof typeof common];
+      if (control?.invalid) {
+        blockers.push(label);
+      }
+    }
+
+    const emailCtrl = common.institutionalEmail;
+    const email = String(emailCtrl.value ?? '').trim();
+    if (emailCtrl.hasError('duplicateEmail')) {
+      blockers.push('Correo institucional ya registrado');
+    } else if (!this.isEmailUnchanged(email)) {
+      if (this.emailAvailability() === 'checking') {
+        blockers.push('Verificando correo institucional...');
+      } else if (emailCtrl.hasError('email') || !isValidEmailFormat(email)) {
+        blockers.push('Correo institucional con formato válido');
+      } else if (this.emailAvailability() !== 'available') {
+        blockers.push('Espere la verificación del correo institucional');
+      }
+    }
+
+    for (const field of this.activeSchema()?.fields ?? []) {
+      const control = this.detailsGroup.get(field.name);
+      if (control?.invalid) {
+        blockers.push(field.label);
+      }
+    }
+
+    return blockers;
   }
 
   onDigitsOnlyInput(event: Event): void {
@@ -206,11 +276,13 @@ export class CredentialEdit implements OnDestroy {
     this.editForm.markAllAsTouched();
     this.detailsGroup.markAllAsTouched();
 
-    if (!this.canSubmit()) {
+    const missing = this.getSubmitBlockers();
+    if (missing.length > 0) {
+      const listHtml = missing.map((field) => `<li>${field}</li>`).join('');
       void Swal.fire({
-        icon: 'warning',
+        icon: 'error',
         title: 'Formulario incompleto',
-        text: 'Revise los campos marcados antes de guardar.',
+        html: `<p style="margin:0 0 8px">Complete los siguientes campos:</p><ul style="text-align:left;margin:0;padding-left:1.25rem">${listHtml}</ul>`,
         confirmButtonColor: '#163665',
       });
       return;
@@ -284,8 +356,13 @@ export class CredentialEdit implements OnDestroy {
         this.credentialTypeService.getByCode(mapped.context.credentialTypeCode),
       );
 
+      const typeCode = mapped.context.credentialTypeCode;
+      const schema = isCadeteType(typeCode)
+        ? enrichCadeteSchema(type.schema)
+        : (type.schema ?? { fields: [] });
+
       this.context.set(mapped.context);
-      this.activeSchema.set(type.schema ?? { fields: [] });
+      this.activeSchema.set(schema);
       this.detailsInitialValues.set(mapped.form.details);
       this.originalEmail.set(mapped.form.common.institutionalEmail);
       this.existingPhotoPath.set(credential.imagePath ?? null);
@@ -295,10 +372,14 @@ export class CredentialEdit implements OnDestroy {
         this.photoPreviewUrl.set(getPhotoUrl(credential.imagePath));
       }
 
-      this.editForm.patchValue({
-        status: mapped.form.status,
-        common: mapped.form.common,
-      });
+      this.editForm.patchValue(
+        {
+          status: mapped.form.status,
+          common: mapped.form.common,
+        },
+        { emitEvent: false },
+      );
+      this.editForm.updateValueAndValidity();
     } catch (error) {
       console.error('No se pudo cargar la credencial', error);
       await Swal.fire({
@@ -313,6 +394,21 @@ export class CredentialEdit implements OnDestroy {
     }
   }
 
+  private setupFormStateWatcher(): void {
+    merge(
+      this.editForm.statusChanges,
+      this.editForm.valueChanges,
+      this.detailsGroup.statusChanges,
+      this.detailsGroup.valueChanges,
+    )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.formStateTick.update((n: number) => n + 1));
+  }
+
+  private isEmailUnchanged(email: string): boolean {
+    return email.toLowerCase() === this.originalEmail().trim().toLowerCase();
+  }
+
   private setupEmailValidator(): void {
     const emailCtrl = this.editForm.controls.common.controls.institutionalEmail;
 
@@ -320,11 +416,19 @@ export class CredentialEdit implements OnDestroy {
       .pipe(
         debounceTime(600),
         distinctUntilChanged(),
-        tap(() => {
-          this.emailAvailability.set('idle');
+        tap((value) => {
           patchDuplicateError(emailCtrl, 'duplicateEmail', false);
+          if (this.isEmailUnchanged(String(value ?? '').trim())) {
+            this.emailAvailability.set('available');
+            return;
+          }
+          this.emailAvailability.set('idle');
         }),
-        filter((value) => isValidEmailFormat(value)),
+        filter((value) => {
+          const email = String(value ?? '').trim();
+          if (this.isEmailUnchanged(email)) return false;
+          return isValidEmailFormat(email);
+        }),
         tap(() => this.emailAvailability.set('checking')),
         switchMap((value) => {
           if (value.trim().toLowerCase() === this.originalEmail().trim().toLowerCase()) {

@@ -146,7 +146,7 @@
                       <div class="reg-field-group">
                         <div class="reg-field-label">
                           <mat-icon>person</mat-icon>
-                          <span>Nombre *</span>
+                          <span>Nombres *</span>
                         </div>
                         <mat-form-field appearance="outline" class="reg-field">
                           <input
@@ -158,14 +158,14 @@
                             registrationForm.controls.common.controls.firstName.touched &&
                             registrationForm.controls.common.controls.firstName.hasError('required')
                           ) {
-                            <mat-error>El nombre es requerido</mat-error>
+                            <mat-error>Los nombres son requeridos</mat-error>
                           }
                         </mat-form-field>
                       </div>
                       <div class="reg-field-group">
                         <div class="reg-field-label">
                           <mat-icon>person_outline</mat-icon>
-                          <span>Apellido *</span>
+                          <span>Apellidos *</span>
                         </div>
                         <mat-form-field appearance="outline" class="reg-field">
                           <input
@@ -177,7 +177,7 @@
                             registrationForm.controls.common.controls.lastName.touched &&
                             registrationForm.controls.common.controls.lastName.hasError('required')
                           ) {
-                            <mat-error>El apellido es requerido</mat-error>
+                            <mat-error>Los apellidos son requeridos</mat-error>
                           }
                         </mat-form-field>
                       </div>
@@ -476,6 +476,7 @@
               <app-dynamic-credential-form
                 [group]="detailsGroup"
                 [schema]="activeSchema()"
+                [initialValues]="detailsInitialValues()"
               ></app-dynamic-credential-form>
             </div>
           }

@@ -9,6 +9,26 @@ export type CredentialFieldType =
   | 'checkbox'
   | 'boolean';
 
+export interface CredentialFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface CredentialFieldOptionGroup {
+  name: string;
+  options: CredentialFieldOption[];
+}
+
+export interface CredentialFieldHiddenWhen {
+  field: string;
+  values: string[];
+}
+
+export interface CredentialFieldAutoValueWhen {
+  field: string;
+  values: Record<string, string>;
+}
+
 export interface CredentialFieldSchema {
   name: string;
   label: string;
@@ -20,6 +40,14 @@ export interface CredentialFieldSchema {
   max?: number;
   pattern?: string;
   options?: string[];
+  dependsOn?: string;
+  optionsByParent?: Record<string, string[]>;
+  optionGroupsByParent?: Record<string, CredentialFieldOptionGroup[]>;
+  optionLabels?: Record<string, string>;
+  hiddenWhen?: CredentialFieldHiddenWhen;
+  autoValueWhen?: CredentialFieldAutoValueWhen;
+  /** Valor inicial cuando no hay initialValues ni valor del usuario. */
+  defaultValue?: string;
 }
 
 export interface CredentialTypeSchema {

@@ -2,8 +2,9 @@ export type CredentialStatusCode =
   | 'ACTIVE'
   | 'PENDING'
   | 'EXPIRED'
-  | 'REVOKED'
-  | 'SUSPENDED';
+  | 'TRANSFERRED';
+
+export type CredentialStatusBadgeClass = 'ok' | 'warn' | 'off' | 'info';
 
 export const CREDENTIAL_STATUS_OPTIONS: Array<{
   value: CredentialStatusCode;
@@ -12,13 +13,50 @@ export const CREDENTIAL_STATUS_OPTIONS: Array<{
   { value: 'ACTIVE', label: 'Activo' },
   { value: 'PENDING', label: 'Pendiente' },
   { value: 'EXPIRED', label: 'Expirado' },
-  { value: 'REVOKED', label: 'Revocado' },
-  { value: 'SUSPENDED', label: 'Suspendido' },
+  { value: 'TRANSFERRED', label: 'Trasladado' },
 ];
 
-export function getCredentialStatusLabel(status?: string | null): string {
+export function normalizeCredentialStatus(status?: string | null): CredentialStatusCode {
   const normalized = String(status ?? 'ACTIVE').trim().toUpperCase();
+
+  switch (normalized) {
+    case 'PENDING':
+    case 'PENDIENTE':
+      return 'PENDING';
+    case 'EXPIRED':
+    case 'EXPIRADO':
+    case 'INACTIVE':
+    case 'INACTIVO':
+      return 'EXPIRED';
+    case 'TRANSFERRED':
+    case 'TRASLADADO':
+      return 'TRANSFERRED';
+    case 'ACTIVE':
+    case 'ACTIVO':
+      return 'ACTIVE';
+    default:
+      return 'ACTIVE';
+  }
+}
+
+export function getCredentialStatusLabel(status?: string | null): string {
+  const normalized = normalizeCredentialStatus(status);
   return CREDENTIAL_STATUS_OPTIONS.find((item) => item.value === normalized)?.label ?? normalized;
+}
+
+export function getCredentialStatusBadgeClass(
+  status?: string | null,
+): CredentialStatusBadgeClass {
+  switch (normalizeCredentialStatus(status)) {
+    case 'ACTIVE':
+      return 'ok';
+    case 'PENDING':
+      return 'warn';
+    case 'EXPIRED':
+      return 'off';
+    case 'TRANSFERRED':
+      return 'info';
+  }
 }
 
 export function getIdTypeLabel(idType: string): string {

@@ -173,7 +173,7 @@ export class PersonalListService {
       tipoRegistroCodigo,
       tipoRegistroNombre,
       detallesRegistro: details,
-      estado: 'pendiente',
+      estado: 'PENDING',
       correo: String(common['institutionalEmail'] ?? `pendiente.${id}@fuerzasarmadas.mil`),
       fechaIngreso: formatDate(new Date()),
       fechaNacimiento: formatDate(new Date(String(common['birthDate'] ?? ''))),

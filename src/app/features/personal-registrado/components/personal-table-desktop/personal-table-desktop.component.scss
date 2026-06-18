@@ -157,6 +157,16 @@
   background: #64748b;
 }
 
+.pr-badge.info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e3a8a;
+}
+
+.pr-badge.info .dot {
+  background: #2563eb;
+}
+
 .pr-type-badge {
   display: inline-flex;
   max-width: 100%;

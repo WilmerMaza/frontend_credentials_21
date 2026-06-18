@@ -159,6 +159,16 @@
   background: #64748b;
 }
 
+.badge.info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e3a8a;
+}
+
+.badge.info .dot {
+  background: #2563eb;
+}
+
 .row-grid {
   margin-top: 10px;
   display: grid;

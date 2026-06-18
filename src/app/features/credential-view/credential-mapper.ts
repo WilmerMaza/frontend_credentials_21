@@ -5,6 +5,7 @@ import {
   type PersonalItem,
 } from '../personal-registrado/models/personal-item.model';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
+import { normalizeCredentialStatus } from '../../shared/utils/credential-status.utils';
 import type { CredentialData } from './credential-data.types';
 import type { CredentialPdfData } from './credential-view-pdf.component';
 
@@ -53,7 +54,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
       variante,
     },
     resumen: getCredentialSummary(variante, item),
-    estado: (item.estado ?? 'activo').toUpperCase(),
+    estado: normalizeCredentialStatus(item.estado),
     camposPrincipales: buildPrimaryFields(variante, item),
     camposSecundarios: buildSecondaryFields(variante, item),
     contacto: {
@@ -119,19 +120,22 @@ export function deriveValidoHasta(fechaIngreso?: string): string {
 }
 
 function getCredentialVariant(typeCode: string): CredentialVariant {
-  if (typeCode.includes('inter')) return 'inter-escuelas';
-  if (typeCode.includes('civil')) return 'civil';
+  const normalized = normalizeTypeCode(typeCode);
+  if (normalized === 'cadetes' || normalized === 'inter-escuelas' || normalized.includes('inter')) {
+    return 'cadetes';
+  }
+  if (normalized.includes('civil')) return 'civil';
   return 'militar';
 }
 
 function getCredentialTitle(variant: CredentialVariant): string {
-  if (variant === 'inter-escuelas') return 'CREDENCIAL INTER-ESCUELAS';
+  if (variant === 'cadetes') return 'CREDENCIAL CADETES';
   if (variant === 'civil') return 'CREDENCIAL PERSONAL CIVIL';
   return 'CREDENCIAL DE IDENTIFICACIÓN';
 }
 
 function getCredentialSummary(variant: CredentialVariant, item: PersonalItem): string {
-  if (variant === 'inter-escuelas') {
+  if (variant === 'cadetes') {
     return (
       getCredentialDetailValue(item.detallesRegistro, 'sport', 'deporte') ??
       item.tipoRegistroNombre
@@ -146,7 +150,7 @@ function getCredentialSummary(variant: CredentialVariant, item: PersonalItem): s
 function buildPrimaryFields(variant: CredentialVariant, item: PersonalItem) {
   const details = item.detallesRegistro;
 
-  if (variant === 'inter-escuelas') {
+  if (variant === 'cadetes') {
     return compactFields([
       field('FUERZA', getCredentialDetailValue(details, 'force', 'fuerza') ?? item.unidad),
       field('DEPORTE', getCredentialDetailValue(details, 'sport', 'deporte')),

@@ -237,10 +237,6 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     this.pageIndex.set(Math.min(this.pageIndex(), Math.max(0, this.totalPages() - 1)));
   }
 
-  getEstadoLabel(estado: string): string {
-    return estado === 'activo' ? 'Activo' : estado === 'pendiente' ? 'Pendiente' : 'Inactivo';
-  }
-
   onView(item: PersonalItem): void {
     this.router.navigate(['/personal-registrado', 'credential', item.id], {
       state: { credential: item },

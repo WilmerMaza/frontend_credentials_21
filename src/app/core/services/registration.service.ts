@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { EnapApi } from './enap.api';
+import { BYPASS_SPINNER } from '../interceptors/loading.interceptor';
 import type { CredentialApiResponse } from '../../features/personal-registrado/models/personal-item.model';
 
 /**
@@ -50,7 +52,8 @@ export class RegistrationService {
     photo?: File,
   ): Observable<CredentialApiResponse> {
     const formData = this.buildFormData(payload, photo);
-    return this.enap.post<CredentialApiResponse>('/credentials', formData);
+    const context = new HttpContext().set(BYPASS_SPINNER, true);
+    return this.enap.post<CredentialApiResponse>('/credentials', formData, context);
   }
 
   /**

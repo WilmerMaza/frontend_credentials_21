@@ -22,7 +22,9 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
     req.url.includes('/login/me') ||
     req.url.includes('/login');
 
-  if (isAuthUrl) {
+  const isPublicVerifyUrl = req.url.includes('/verify');
+
+  if (isAuthUrl || isPublicVerifyUrl) {
     return next(req);
   }
 

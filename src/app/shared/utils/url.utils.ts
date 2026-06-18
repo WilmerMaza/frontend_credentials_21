@@ -14,3 +14,11 @@ export function getPhotoUrl(photoPath?: string): string {
   const path = photoPath.startsWith('/') ? photoPath.slice(1) : photoPath;
   return `${baseUrl}/${path}`;
 }
+
+/** Foto pública para la página de verificación (sin JWT). */
+export function getPublicVerifyPhotoUrl(filename?: string): string {
+  if (!filename) return '';
+  const apiUrl = environment.enap_api;
+  const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+  return `${baseUrl}/verify/photo/${encodeURIComponent(filename)}`;
+}

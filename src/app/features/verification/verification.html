@@ -1,1 +1,124 @@
-<p>verification works!</p>
+<div class="verify-page">
+  <mat-toolbar class="verify-topbar" role="banner">
+    <div class="verify-topbar__inner">
+      <div class="verify-brand">
+        <img class="verify-brand__logo" [src]="logoUrl" alt="Escudo ENAP" />
+        <div class="verify-brand__text">
+          <div class="verify-brand__title">ESCUELA NAVAL DE CADETES</div>
+          <div class="verify-brand__subtitle">ALMIRANTE PADILLA</div>
+          <div class="verify-brand__motto">Verificación de credencial digital</div>
+        </div>
+      </div>
+    </div>
+  </mat-toolbar>
+
+  <main class="verify-main">
+    <header class="verify-head">
+      <h1 class="verify-title">Validación de credencial</h1>
+      <p class="verify-subtitle">
+        Consulta pública para confirmar la autenticidad del documento presentado.
+      </p>
+    </header>
+
+    @if (loading()) {
+      <div class="verify-loading" aria-live="polite">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p>Verificando credencial…</p>
+      </div>
+    } @else if (loadError()) {
+      <section class="verify-status verify-status--invalid" role="alert">
+        <mat-icon>{{ statusIcon() }}</mat-icon>
+        <div>
+          <h2>No se pudo verificar</h2>
+          <p>{{ loadError() }}</p>
+        </div>
+      </section>
+    } @else if (viewModel(); as vm) {
+      <section class="verify-status" [class]="statusClass()" role="status">
+        <mat-icon>{{ statusIcon() }}</mat-icon>
+        <div>
+          <h2>{{ vm.valid ? 'Credencial válida' : outcomeLabel(vm.outcome) }}</h2>
+          <p>{{ message() }}</p>
+          @if (checkedAt(); as checked) {
+            <p class="verify-checked-at">
+              Consulta realizada el {{ checked | date: 'dd/MM/yyyy HH:mm' }}
+            </p>
+          }
+        </div>
+      </section>
+
+      @if (credential(); as c) {
+        <article
+          class="verify-card"
+          [class.verify-card--cadetes]="c.tipoRegistro.variante === 'cadetes'"
+          [class.verify-card--civil]="c.tipoRegistro.variante === 'civil'"
+        >
+          <div class="verify-card__header">
+            <div class="verify-card__brand">
+              <img [src]="logoUrl" [alt]="c.org.nombre" />
+              <div>
+                <div class="verify-card__org">{{ c.org.nombre }}</div>
+                <div class="verify-card__org-sub">{{ c.org.pais }} – {{ c.org.dependencia }}</div>
+              </div>
+            </div>
+            <span class="verify-card__doc">{{ c.doc.titulo }}</span>
+          </div>
+
+          <div class="verify-card__body">
+            <aside class="verify-card__photo">
+              @if (photoUrl()) {
+                <img [src]="photoUrl()" [alt]="c.persona.nombreCompleto" />
+              } @else {
+                <div class="verify-card__photo-placeholder">FOTO</div>
+              }
+              <span
+                class="verify-card__pill"
+                [class.verify-card__pill--active]="getCredentialStatusBadgeClass(c.estado) === 'ok'"
+                [class.verify-card__pill--warn]="getCredentialStatusBadgeClass(c.estado) === 'warn'"
+                [class.verify-card__pill--off]="getCredentialStatusBadgeClass(c.estado) === 'off'"
+                [class.verify-card__pill--info]="getCredentialStatusBadgeClass(c.estado) === 'info'"
+              >
+                {{ getCredentialStatusLabel(c.estado) }}
+              </span>
+            </aside>
+
+            <section class="verify-card__info">
+              <div class="verify-field verify-field--xl">
+                <div class="verify-field__label">NOMBRE COMPLETO</div>
+                <div class="verify-field__value">{{ c.persona.nombreCompleto }}</div>
+              </div>
+
+              <div class="verify-kv">
+                <div class="verify-kv__k">TIPO DE REGISTRO</div>
+                <div class="verify-kv__v">{{ c.tipoRegistro.nombre }}</div>
+              </div>
+
+              @for (field of c.camposPrincipales; track field.label) {
+                <div class="verify-kv">
+                  <div class="verify-kv__k">{{ field.label }}</div>
+                  <div class="verify-kv__v">{{ field.value }}</div>
+                </div>
+              }
+
+              @for (field of c.camposSecundarios; track field.label) {
+                <div class="verify-kv verify-kv--wide">
+                  <div class="verify-kv__k">{{ field.label }}</div>
+                  <div class="verify-kv__v">{{ field.value }}</div>
+                </div>
+              }
+
+              <div class="verify-kv verify-kv--wide">
+                <div class="verify-kv__k">EMISIÓN</div>
+                <div class="verify-kv__v">{{ c.vigencia.emision }}</div>
+              </div>
+              <div class="verify-kv verify-kv--wide">
+                <div class="verify-kv__k">VÁLIDO HASTA</div>
+                <div class="verify-kv__v">{{ c.vigencia.validoHasta }}</div>
+              </div>
+            </section>
+          </div>
+        </article>
+      }
+    }
+  </main>
+</div>

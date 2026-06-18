@@ -12,6 +12,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/login/login').then((m) => m.Login),
   },
   {
+    path: 'verify/:identityNumber',
+    loadComponent: () =>
+      import('./features/verification/verification').then((m) => m.Verification),
+  },
+  {
     path: '',
     canActivate: [JwtGuard],
     children: [

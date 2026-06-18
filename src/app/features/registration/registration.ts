@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   afterNextRender,
+  computed,
   DestroyRef,
   ElementRef,
   EnvironmentInjector,
@@ -22,7 +23,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
-import { debounceTime, distinctUntilChanged, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, finalize, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
 import {
   mapCredentialToPersonalItem,
@@ -30,15 +31,10 @@ import {
 } from '../personal-registrado/models/personal-item.model';
 import { RegistrationService, type RegistrationPayload } from '../../core/services/registration.service';
 import { ValidationService } from '../../core/services/validation.service';
-import { CredentialPdfService } from '../../core/services/credential-pdf.service';
-import { MailService } from '../../core/services/mail.service';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
-import { buildCredentialPdfData } from '../credential-view/credential-mapper';
 import type { PersonalItemWithExtras } from '../credential-view/credential-mapper';
-import { getPhotoUrl } from '../../shared/utils/url.utils';
-import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
 import {
   buildDuplicateEmailAlert,
   getRegistrationErrorAlert,
@@ -103,8 +99,6 @@ export class Registration implements OnDestroy {
   private readonly registrationService = inject(RegistrationService);
   private readonly personalListService = inject(PersonalListService);
   private readonly validationService = inject(ValidationService);
-  private readonly credentialPdfService = inject(CredentialPdfService);
-  private readonly mailService = inject(MailService);
   private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly credentialTypeService = inject(CredentialTypeService);
   private readonly destroyRef = inject(DestroyRef);
@@ -121,6 +115,8 @@ export class Registration implements OnDestroy {
   }
 
   submitting = signal(false);
+  hasPhotoSelected = signal(false);
+  private readonly formRevision = signal(0);
   selectedPhoto?: File;
   photoPreviewUrl = signal<string | null>(null);
   photoRequired = signal(false);
@@ -190,11 +186,13 @@ export class Registration implements OnDestroy {
 
   // ✅ solo lo llama el select "type"
   onTypeChange(next: RegistrationType): void {
-    Object.keys(this.detailsGroup.controls).forEach((k) => this.detailsGroup.removeControl(k));
-    this.detailsGroup.reset();
     this.detailsInitialValues.set({});
     const selected = this.credentialTypes().find((type) => type.code === next);
-    this.activeSchema.set(selected?.schema ?? { fields: [] });
+    const schema = selected?.schema ?? { fields: [] };
+    this.activeSchema.set({
+      fields: [...(schema.fields ?? [])],
+    });
+    this.bumpFormRevision();
   }
 
   constructor() {
@@ -202,7 +200,33 @@ export class Registration implements OnDestroy {
     void this.loadCredentialTypes();
     this.restoreDraftIfExists();
     this.setupRealtimeValidators();
+    this.setupFormRevisionTracking();
   }
+
+  private setupFormRevisionTracking(): void {
+    this.registrationForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.bumpFormRevision());
+
+    this.registrationForm.statusChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.bumpFormRevision());
+  }
+
+  private bumpFormRevision(): void {
+    this.formRevision.update((value) => value + 1);
+  }
+
+  readonly submitBlockers = computed(() => {
+    this.formRevision();
+    this.activeSchema();
+    this.emailAvailability();
+    this.identityAvailability();
+    this.submitting();
+    this.hasPhotoSelected();
+    this.photoRequired();
+    return this.computeSubmitBlockers();
+  });
 
   canSubmitForm(): boolean {
     if (this.submitting()) return false;
@@ -226,6 +250,18 @@ export class Registration implements OnDestroy {
     return true;
   }
 
+  getSubmitButtonLabel(): string {
+    if (this.submitting()) return 'Procesando...';
+    if (this.canSubmitForm()) return 'Finalizar Registro';
+    return 'Complete el formulario';
+  }
+
+  getSubmitButtonIcon(): string {
+    if (this.submitting()) return 'hourglass_empty';
+    if (this.canSubmitForm()) return 'check_circle';
+    return 'pending_actions';
+  }
+
   isEmailVerified(): boolean {
     const email = String(
       this.registrationForm.controls.common.controls.institutionalEmail.value ?? '',
@@ -241,6 +277,10 @@ export class Registration implements OnDestroy {
   }
 
   getSubmitBlockers(): string[] {
+    return this.submitBlockers();
+  }
+
+  private computeSubmitBlockers(): string[] {
     if (this.canSubmitForm()) return [];
 
     const blockers: string[] = [];
@@ -250,7 +290,7 @@ export class Registration implements OnDestroy {
       return blockers;
     }
 
-    if (!this.selectedPhoto) {
+    if (!this.hasPhotoSelected()) {
       blockers.push('Foto para credencial');
     }
 
@@ -374,7 +414,9 @@ export class Registration implements OnDestroy {
         this.registrationForm.controls.type.setValue(enriched[0].code);
       }
 
-      this.onTypeChange(this.registrationForm.controls.type.value);
+      queueMicrotask(() => {
+        this.onTypeChange(this.registrationForm.controls.type.value);
+      });
     } catch (error) {
       console.error('No se pudieron cargar los tipos de credencial', error);
     }
@@ -552,6 +594,7 @@ export class Registration implements OnDestroy {
         if (!blob) return;
         const file = new File([blob], 'foto-captura.jpg', { type: 'image/jpeg' });
         this.selectedPhoto = file;
+        this.hasPhotoSelected.set(true);
         const prev = this.photoPreviewUrl();
         if (prev) URL.revokeObjectURL(prev);
         this.photoPreviewUrl.set(URL.createObjectURL(blob));
@@ -594,6 +637,7 @@ export class Registration implements OnDestroy {
     }
 
     this.selectedPhoto = file;
+    this.hasPhotoSelected.set(true);
     const prev = this.photoPreviewUrl();
     if (prev) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(URL.createObjectURL(file));
@@ -633,29 +677,28 @@ export class Registration implements OnDestroy {
   }
 
   private clearRegistrationForm(): void {
-    this.registrationForm.reset({
-      type: 'militar',
-      common: {
-        firstName: '',
-        lastName: '',
-        idType: '',
-        idNumber: '',
-        birthDate: null,
-        validUntil: null,
-        institutionalEmail: '',
-        phone: '',
-      },
-      details: {},
+    this.registrationForm.controls.common.reset({
+      firstName: '',
+      lastName: '',
+      idType: '',
+      idNumber: '',
+      birthDate: null,
+      validUntil: null,
+      institutionalEmail: '',
+      phone: '',
     });
-    Object.keys(this.detailsGroup.controls).forEach((k) => this.detailsGroup.removeControl(k));
-    this.detailsGroup.reset();
+    this.registrationForm.controls.type.setValue('militar');
+    this.detailsInitialValues.set({});
     this.selectedPhoto = undefined;
+    this.hasPhotoSelected.set(false);
     const prev = this.photoPreviewUrl();
     if (prev) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(null);
     this.photoRequired.set(false);
     this.emailAvailability.set('idle');
     this.identityAvailability.set('idle');
+    this.activeSchema.set(null);
+    queueMicrotask(() => this.onTypeChange('militar'));
   }
 
   async onSubmit(): Promise<void> {
@@ -728,15 +771,17 @@ export class Registration implements OnDestroy {
     };
 
     this.submitting.set(true);
-    this.registrationService.submitRegistration(payload, this.selectedPhoto).subscribe({
-      next: (created) => {
-        void this.handleRegistrationSuccess(created, raw.common);
-      },
-      error: (err) => {
-        void this.showRegistrationError(err, email);
-      },
-      complete: () => this.submitting.set(false),
-    });
+    this.registrationService
+      .submitRegistration(payload, this.selectedPhoto)
+      .pipe(finalize(() => this.submitting.set(false)))
+      .subscribe({
+        next: (created) => {
+          void this.handleRegistrationSuccess(created, raw.common);
+        },
+        error: (err) => {
+          void this.showRegistrationError(err, email);
+        },
+      });
   }
 
   private async showRegistrationError(err: unknown, email?: string): Promise<void> {
@@ -785,7 +830,7 @@ export class Registration implements OnDestroy {
   };
 
   private collectMissingFields(): string[] {
-    return this.getSubmitBlockers();
+    return this.submitBlockers();
   }
 
   private expandSectionsForMissing(missing: string[]): void {
@@ -846,53 +891,13 @@ export class Registration implements OnDestroy {
     this.clearRegistrationForm();
 
     void Swal.fire({
-      title: 'Enviando credencial...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
+      icon: 'success',
+      title: 'Registro exitoso',
+      text: institutionalEmail
+        ? `Credencial creada. Se enviará una copia a ${institutionalEmail} en breve.`
+        : 'Credencial creada correctamente.',
+      confirmButtonColor: '#163665',
     });
-
-    let emailSent = false;
-    let mailErrorMessage: string | undefined;
-    try {
-      const pdfData = buildCredentialPdfData(
-        newItem,
-        newItem.photoUrl ? getPhotoUrl(newItem.photoUrl) : undefined,
-      );
-      const blob = await this.credentialPdfService.generateBlobFromData(
-        pdfData,
-        this.environmentInjector,
-      );
-      const nombre = newItem.nombreCompleto;
-      await firstValueFrom(
-        this.mailService.sendCredentialEmail(institutionalEmail, blob, {
-          subject: nombre ? `Tu credencial - ${nombre}` : 'Tu credencial',
-        }),
-      );
-      emailSent = true;
-    } catch (err) {
-      console.error('Error al enviar credencial por correo:', err);
-      mailErrorMessage = getHttpErrorMessage(err, 'mail');
-    }
-
-    Swal.close();
-
-    if (emailSent) {
-      void Swal.fire({
-        icon: 'success',
-        title: 'Registro exitoso',
-        text: `Credencial creada y enviada a ${institutionalEmail}.`,
-        confirmButtonColor: '#163665',
-      });
-    } else {
-      void Swal.fire({
-        icon: 'warning',
-        title: 'Registro exitoso',
-        text:
-          mailErrorMessage ??
-          'La credencial se creó correctamente, pero no se pudo enviar el correo. Puede compartirla desde la vista de credencial.',
-        confirmButtonColor: '#163665',
-      });
-    }
 
     this.navigationService.navigate('/personal-registrado');
   }

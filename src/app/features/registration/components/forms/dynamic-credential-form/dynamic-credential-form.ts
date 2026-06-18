@@ -251,6 +251,11 @@ export class DynamicCredentialForm implements OnChanges {
     control.markAsTouched();
   }
 
+  getFieldControl(field: CredentialFieldSchema): FormControl | null {
+    const control = this.group.controls[field.name];
+    return control instanceof FormControl ? control : null;
+  }
+
   private rebuildForm(): void {
     this.cascadeTeardown?.();
 

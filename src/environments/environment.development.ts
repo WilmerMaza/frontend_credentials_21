@@ -1,6 +1,7 @@
 export const environment = {
   production: false,
   enap_api: 'http://localhost:3000',
+  //enap_api: '/api',
   /** Debe coincidir con API_KEY del backend (.env). Vacío = sin header (guard desactivado). */
   apiKey: '',
   GetHexaKey:

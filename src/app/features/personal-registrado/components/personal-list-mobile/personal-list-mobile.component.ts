@@ -46,7 +46,7 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <div class="v skeleton" style="width: 80px; height: 16px; margin-top: 4px;"></div>
               </div>
               <div class="kv">
-                <div class="k">Ingreso</div>
+                <div class="k">Vigencia</div>
                 <div class="v skeleton" style="width: 70px; height: 16px; margin-top: 4px;"></div>
               </div>
               <div class="kv full">
@@ -96,8 +96,8 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <div class="v">{{ row.rango }}</div>
               </div>
               <div class="kv">
-                <div class="k">Ingreso</div>
-                <div class="v">{{ row.fechaIngreso }}</div>
+                <div class="k">Vigencia</div>
+                <div class="v">{{ row.validoHasta }}</div>
               </div>
               <div class="kv full">
                 <div class="k">Correo</div>

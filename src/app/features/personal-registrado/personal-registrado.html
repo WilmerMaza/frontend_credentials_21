@@ -13,6 +13,7 @@
       <app-personal-search
         [isMobile]="true"
         [searchForm]="searchForm"
+        [statusOptions]="statusFilterOptions"
         [(filtersExpanded)]="filtersExpanded"
         (search)="onSearch()"
         (clearSearch)="onClearSearch()"
@@ -70,6 +71,7 @@
       <app-personal-search
         [isMobile]="false"
         [searchForm]="searchForm"
+        [statusOptions]="statusFilterOptions"
         [(filtersExpanded)]="filtersExpanded"
         (search)="onSearch()"
         (clearSearch)="onClearSearch()"

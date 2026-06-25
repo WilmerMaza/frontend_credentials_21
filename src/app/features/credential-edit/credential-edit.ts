@@ -37,6 +37,9 @@ import {
 } from '../personal-registrado/models/personal-item.model';
 import type { CredentialTypeSchema } from '../../core/models/credential-type.model';
 import { DynamicCredentialForm } from '../registration/components/forms/dynamic-credential-form/dynamic-credential-form';
+import { DateInputMaskDirective } from '../../shared/directives/date-input-mask.directive';
+import { IdentityInputMaskDirective } from '../../shared/directives/identity-input-mask.directive';
+import { PhoneInputMaskDirective } from '../../shared/directives/phone-input-mask.directive';
 import {
   mapCredentialToEditForm,
   type CredentialEditContext,
@@ -45,18 +48,24 @@ import {
   CREDENTIAL_STATUS_OPTIONS,
   getCredentialStatusLabel,
   getIdTypeLabel,
+  normalizeCredentialStatus,
 } from '../../shared/utils/credential-status.utils';
+import { isCredentialExpired } from '../../shared/utils/credential-expiration.utils';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
-import { enrichCadeteSchema, isCadeteType } from '../../shared/utils/cadete-schema.utils';
 import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
 import { buildDuplicateEmailAlert } from '../../shared/utils/registration-error.utils';
 import {
   type AvailabilityStatus,
   digitsOnlyValidator,
   institutionalEmailValidator,
+  isIdentityReadyForLookup,
+  isPlaceholderDraftIdentity,
   isValidEmailFormat,
   patchDuplicateError,
 } from '../../shared/utils/registration-validation.utils';
+
+type IdType = 'cc' | 'ti' | 'ce' | 'pasaporte';
+type IdTypeOption = { value: IdType; label: string };
 
 @Component({
   selector: 'app-credential-edit',
@@ -76,6 +85,9 @@ import {
     MatDatepickerModule,
     BreadcrumbComponent,
     DynamicCredentialForm,
+    DateInputMaskDirective,
+    IdentityInputMaskDirective,
+    PhoneInputMaskDirective,
   ],
 })
 export class CredentialEdit implements OnDestroy {
@@ -90,6 +102,12 @@ export class CredentialEdit implements OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly statusOptions = CREDENTIAL_STATUS_OPTIONS;
+  readonly idTypes: IdTypeOption[] = [
+    { value: 'cc', label: 'Cédula de ciudadanía (CC)' },
+    { value: 'ti', label: 'Tarjeta de identidad (TI)' },
+    { value: 'ce', label: 'Cédula de extranjería (CE)' },
+    { value: 'pasaporte', label: 'Pasaporte' },
+  ];
   readonly getIdTypeLabel = getIdTypeLabel;
   readonly getCredentialStatusLabel = getCredentialStatusLabel;
 
@@ -99,10 +117,13 @@ export class CredentialEdit implements OnDestroy {
   activeSchema = signal<CredentialTypeSchema | null>(null);
   detailsInitialValues = signal<Record<string, unknown>>({});
   originalEmail = signal('');
+  originalIdentity = signal('');
   existingPhotoPath = signal<string | null>(null);
   selectedPhoto?: File;
   photoPreviewUrl = signal<string | null>(null);
+  photoRequired = signal(false);
   emailAvailability = signal<AvailabilityStatus>('idle');
+  identityAvailability = signal<AvailabilityStatus>('idle');
   private readonly formStateTick = signal(0);
 
   readonly editForm = this.fb.group({
@@ -116,6 +137,8 @@ export class CredentialEdit implements OnDestroy {
         validators: [Validators.required, institutionalEmailValidator()],
       }),
       phone: this.fb.control('', { validators: [digitsOnlyValidator()] }),
+      idType: this.fb.control<IdType | ''>(''),
+      idNumber: this.fb.control(''),
     }),
     details: this.fb.group({}),
   });
@@ -133,6 +156,7 @@ export class CredentialEdit implements OnDestroy {
     }
     void this.loadCredential(id);
     this.setupEmailValidator();
+    this.setupIdentityValidator();
     this.setupFormStateWatcher();
   }
 
@@ -146,16 +170,38 @@ export class CredentialEdit implements OnDestroy {
 
     if (this.loading() || this.submitting()) return false;
     if (this.editForm.invalid || this.detailsGroup.invalid) return false;
-    if (this.emailAvailability() === 'checking') return false;
+    if (this.emailAvailability() === 'checking' || this.identityAvailability() === 'checking') {
+      return false;
+    }
 
     const emailCtrl = this.editForm.controls.common.controls.institutionalEmail;
     const email = String(emailCtrl.value ?? '').trim();
     if (emailCtrl.hasError('duplicateEmail')) return false;
     if (!isValidEmailFormat(email)) return false;
 
+    if (this.isPendingCredential()) {
+      const idCtrl = this.editForm.controls.common.controls.idNumber;
+      const idNumber = String(idCtrl.value ?? '').trim();
+      if (idCtrl.hasError('duplicateIdentity')) return false;
+      if (!isIdentityReadyForLookup(idNumber)) return false;
+      if (!this.isIdentityUnchanged(idNumber) && this.identityAvailability() !== 'available') {
+        return false;
+      }
+      if (!this.hasCredentialPhoto()) return false;
+    }
+
     if (this.isEmailUnchanged(email)) return true;
 
     return this.emailAvailability() === 'available';
+  }
+
+  isIdentityVerified(): boolean {
+    if (!this.isPendingCredential()) return true;
+
+    const idNumber = String(this.editForm.controls.common.controls.idNumber.value ?? '').trim();
+    if (!isIdentityReadyForLookup(idNumber)) return false;
+    if (this.isIdentityUnchanged(idNumber)) return true;
+    return this.identityAvailability() === 'available';
   }
 
   isEmailVerified(): boolean {
@@ -182,6 +228,10 @@ export class CredentialEdit implements OnDestroy {
       return blockers;
     }
 
+    if (this.isPendingCredential() && !this.hasCredentialPhoto()) {
+      blockers.push('Foto para credencial');
+    }
+
     if (this.editForm.controls.status.invalid) {
       blockers.push('Estado de la credencial');
     }
@@ -194,6 +244,8 @@ export class CredentialEdit implements OnDestroy {
       validUntil: 'Vigencia de la credencial',
       institutionalEmail: 'Correo institucional',
       phone: 'Teléfono (solo dígitos)',
+      idType: 'Tipo de identificación',
+      idNumber: 'Número de identificación',
     };
 
     for (const [key, label] of Object.entries(fieldLabels)) {
@@ -217,6 +269,26 @@ export class CredentialEdit implements OnDestroy {
       }
     }
 
+    if (this.isPendingCredential()) {
+      const idCtrl = common.idNumber;
+      const idNumber = String(idCtrl.value ?? '').trim();
+      if (idCtrl.hasError('duplicateIdentity')) {
+        blockers.push('Número de identificación ya registrado');
+      } else if (!this.isIdentityUnchanged(idNumber)) {
+        if (this.identityAvailability() === 'checking') {
+          blockers.push('Verificando número de identificación...');
+        } else if (idCtrl.hasError('required')) {
+          blockers.push('Número de identificación');
+        } else if (idCtrl.hasError('digitsOnly')) {
+          blockers.push('Número de identificación (solo dígitos)');
+        } else if (!isIdentityReadyForLookup(idNumber)) {
+          blockers.push('Número de identificación (mínimo 5 dígitos)');
+        } else if (this.identityAvailability() !== 'available') {
+          blockers.push('Espere la verificación del número de identificación');
+        }
+      }
+    }
+
     for (const field of this.activeSchema()?.fields ?? []) {
       const control = this.detailsGroup.get(field.name);
       if (control?.invalid) {
@@ -225,12 +297,6 @@ export class CredentialEdit implements OnDestroy {
     }
 
     return blockers;
-  }
-
-  onDigitsOnlyInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    input.value = input.value.replace(/\D/g, '');
-    this.editForm.controls.common.controls.phone.setValue(input.value);
   }
 
   onPhotoSelected(event: Event): void {
@@ -267,7 +333,12 @@ export class CredentialEdit implements OnDestroy {
     const prev = this.photoPreviewUrl();
     if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(URL.createObjectURL(file));
+    this.photoRequired.set(false);
     input.value = '';
+  }
+
+  hasCredentialPhoto(): boolean {
+    return Boolean(this.selectedPhoto) || Boolean(this.existingPhotoPath());
   }
 
   async onSubmit(): Promise<void> {
@@ -276,10 +347,14 @@ export class CredentialEdit implements OnDestroy {
     this.editForm.markAllAsTouched();
     this.detailsGroup.markAllAsTouched();
 
+    if (this.isPendingCredential() && !this.hasCredentialPhoto()) {
+      this.photoRequired.set(true);
+    }
+
     const missing = this.getSubmitBlockers();
     if (missing.length > 0) {
       const listHtml = missing.map((field) => `<li>${field}</li>`).join('');
-      void Swal.fire({
+      await Swal.fire({
         icon: 'error',
         title: 'Formulario incompleto',
         html: `<p style="margin:0 0 8px">Complete los siguientes campos:</p><ul style="text-align:left;margin:0;padding-left:1.25rem">${listHtml}</ul>`,
@@ -293,7 +368,9 @@ export class CredentialEdit implements OnDestroy {
 
     const raw = this.editForm.getRawValue();
     const email = raw.common.institutionalEmail.trim();
+    const idNumber = String(raw.common.idNumber ?? '').trim();
     const emailCtrl = this.editForm.controls.common.controls.institutionalEmail;
+    const idCtrl = this.editForm.controls.common.controls.idNumber;
 
     if (email && email.toLowerCase() !== this.originalEmail().toLowerCase()) {
       const exists = await firstValueFrom(this.validationService.checkEmailExists(email));
@@ -301,7 +378,7 @@ export class CredentialEdit implements OnDestroy {
         patchDuplicateError(emailCtrl, 'duplicateEmail', true);
         this.emailAvailability.set('duplicate');
         const alert = buildDuplicateEmailAlert(email);
-        void Swal.fire({
+        await Swal.fire({
           icon: alert.icon,
           title: alert.title,
           text: alert.text,
@@ -311,30 +388,59 @@ export class CredentialEdit implements OnDestroy {
       }
     }
 
+    if (
+      this.isPendingCredential() &&
+      idNumber &&
+      !this.isIdentityUnchanged(idNumber)
+    ) {
+      const identityExists = await firstValueFrom(
+        this.validationService.checkIdentityExists(idNumber),
+      );
+      if (identityExists) {
+        patchDuplicateError(idCtrl, 'duplicateIdentity', true);
+        this.identityAvailability.set('duplicate');
+        await Swal.fire({
+          icon: 'error',
+          title: 'Identificación ya registrada',
+          text: `El número ${idNumber} ya está asociado a otra credencial.`,
+          confirmButtonColor: '#163665',
+        });
+        return;
+      }
+    }
+
     const payload: UpdateCredentialPayload = {
       type: ctx.credentialTypeCode,
-      status: raw.status,
+      status: this.resolveSubmitStatus(raw.status, raw.common.validUntil),
       common: {
         ...raw.common,
-        idType: ctx.idType,
-        idNumber: ctx.idNumber,
+        idType: this.isPendingCredential() ? raw.common.idType : ctx.idType,
+        idNumber: this.isPendingCredential() ? idNumber : ctx.idNumber,
       },
       details: raw.details as Record<string, unknown>,
     };
 
     this.submitting.set(true);
-    this.registrationService.updateRegistration(ctx.id, payload, this.selectedPhoto).subscribe({
-      next: (updated) => void this.handleSuccess(updated),
-      error: (err) => {
-        void Swal.fire({
-          icon: 'error',
-          title: 'Error al actualizar',
-          text: getHttpErrorMessage(err, 'No se pudieron guardar los cambios.'),
-          confirmButtonColor: '#163665',
-        });
-      },
-      complete: () => this.submitting.set(false),
-    });
+    try {
+      await firstValueFrom(
+        this.registrationService.updateRegistration(ctx.id, payload, this.selectedPhoto),
+      );
+      const refreshed = await firstValueFrom(this.registrationService.getCredential(ctx.id));
+      await this.handleSuccess(refreshed);
+    } catch (err) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error al actualizar',
+        text: getHttpErrorMessage(err, 'No se pudieron guardar los cambios.'),
+        confirmButtonColor: '#163665',
+      });
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  isPendingCredential(): boolean {
+    return this.context()?.status === 'PENDING';
   }
 
   onCancel(): void {
@@ -356,13 +462,8 @@ export class CredentialEdit implements OnDestroy {
         this.credentialTypeService.getByCode(mapped.context.credentialTypeCode),
       );
 
-      const typeCode = mapped.context.credentialTypeCode;
-      const schema = isCadeteType(typeCode)
-        ? enrichCadeteSchema(type.schema)
-        : (type.schema ?? { fields: [] });
-
       this.context.set(mapped.context);
-      this.activeSchema.set(schema);
+      this.activeSchema.set(type.schema ?? { fields: [] });
       this.detailsInitialValues.set(mapped.form.details);
       this.originalEmail.set(mapped.form.common.institutionalEmail);
       this.existingPhotoPath.set(credential.imagePath ?? null);
@@ -372,10 +473,26 @@ export class CredentialEdit implements OnDestroy {
         this.photoPreviewUrl.set(getPhotoUrl(credential.imagePath));
       }
 
+      const isPending = mapped.context.status === 'PENDING';
+      const editableIdNumber = isPlaceholderDraftIdentity(mapped.context.idNumber)
+        ? ''
+        : mapped.context.idNumber;
+      const editableIdType = this.normalizeEditableIdType(mapped.context.idType);
+
+      if (isPending) {
+        this.configurePendingIdentityFields(editableIdNumber);
+      } else {
+        this.clearPendingIdentityFields();
+      }
+
       this.editForm.patchValue(
         {
-          status: mapped.form.status,
-          common: mapped.form.common,
+          status: isPending ? 'ACTIVE' : mapped.form.status,
+          common: {
+            ...mapped.form.common,
+            idType: isPending ? editableIdType : '',
+            idNumber: isPending ? editableIdNumber : '',
+          },
         },
         { emitEvent: false },
       );
@@ -407,6 +524,74 @@ export class CredentialEdit implements OnDestroy {
 
   private isEmailUnchanged(email: string): boolean {
     return email.toLowerCase() === this.originalEmail().trim().toLowerCase();
+  }
+
+  private isIdentityUnchanged(idNumber: string): boolean {
+    const original = this.originalIdentity().trim();
+    const current = idNumber.trim();
+    return Boolean(original) && current === original;
+  }
+
+  private normalizeEditableIdType(value: string): IdType | '' {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'cc' || normalized === 'ti' || normalized === 'ce' || normalized === 'pasaporte') {
+      return normalized;
+    }
+    return '';
+  }
+
+  private configurePendingIdentityFields(idNumber: string): void {
+    const idTypeCtrl = this.editForm.controls.common.controls.idType;
+    const idNumberCtrl = this.editForm.controls.common.controls.idNumber;
+
+    idTypeCtrl.setValidators([Validators.required]);
+    idNumberCtrl.setValidators([Validators.required, digitsOnlyValidator(false)]);
+    idTypeCtrl.updateValueAndValidity({ emitEvent: false });
+    idNumberCtrl.updateValueAndValidity({ emitEvent: false });
+
+    this.originalIdentity.set(idNumber);
+    this.identityAvailability.set(
+      idNumber && isIdentityReadyForLookup(idNumber) ? 'available' : 'idle',
+    );
+  }
+
+  private clearPendingIdentityFields(): void {
+    const idTypeCtrl = this.editForm.controls.common.controls.idType;
+    const idNumberCtrl = this.editForm.controls.common.controls.idNumber;
+
+    idTypeCtrl.clearValidators();
+    idNumberCtrl.clearValidators();
+    idTypeCtrl.updateValueAndValidity({ emitEvent: false });
+    idNumberCtrl.updateValueAndValidity({ emitEvent: false });
+    this.originalIdentity.set('');
+    this.identityAvailability.set('idle');
+  }
+
+  private setupIdentityValidator(): void {
+    const idCtrl = this.editForm.controls.common.controls.idNumber;
+
+    idCtrl.valueChanges
+      .pipe(
+        debounceTime(600),
+        distinctUntilChanged(),
+        filter(() => this.isPendingCredential()),
+        tap(() => {
+          this.identityAvailability.set('idle');
+          patchDuplicateError(idCtrl, 'duplicateIdentity', false);
+        }),
+        filter((value) => {
+          const normalized = String(value ?? '').trim();
+          if (normalized && this.isIdentityUnchanged(normalized)) return false;
+          return isIdentityReadyForLookup(value);
+        }),
+        tap(() => this.identityAvailability.set('checking')),
+        switchMap((value) => this.validationService.checkIdentityExists(value)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((exists) => {
+        this.identityAvailability.set(exists ? 'duplicate' : 'available');
+        patchDuplicateError(idCtrl, 'duplicateIdentity', exists);
+      });
   }
 
   private setupEmailValidator(): void {
@@ -444,17 +629,50 @@ export class CredentialEdit implements OnDestroy {
       });
   }
 
+  private resolveSubmitStatus(
+    formStatus: string,
+    validUntil: Date | null,
+  ): string {
+    if (this.context()?.status === 'PENDING') {
+      return 'ACTIVE';
+    }
+
+    const normalized = normalizeCredentialStatus(formStatus);
+
+    if (validUntil && !isCredentialExpired(validUntil) && normalized === 'EXPIRED') {
+      return 'ACTIVE';
+    }
+
+    if (validUntil && isCredentialExpired(validUntil) && normalized === 'ACTIVE') {
+      return 'EXPIRED';
+    }
+
+    return formStatus;
+  }
+
   private async handleSuccess(updated: CredentialApiResponse): Promise<void> {
+    if (this.context()?.status === 'PENDING') {
+      RegistrationService.clearDraftStorage();
+    }
+
     const page = this.personalListService.currentPage();
     const limit = this.personalListService.pageSize();
     await firstValueFrom(this.personalListService.loadAll(page, limit));
 
     await Swal.fire({
       icon: 'success',
-      title: 'Credencial actualizada',
-      text: 'Los cambios se guardaron correctamente.',
+      title: this.context()?.status === 'PENDING' ? 'Credencial activada' : 'Credencial actualizada',
+      text:
+        this.context()?.status === 'PENDING'
+          ? 'La credencial se completó y ahora está activa.'
+          : 'Los cambios se guardaron correctamente.',
       confirmButtonColor: '#163665',
     });
+
+    if (this.context()?.status === 'PENDING') {
+      void this.router.navigate(['/personal-registrado']);
+      return;
+    }
 
     void this.router.navigate(['/personal-registrado', 'credential', updated.id], {
       state: { credential: mapCredentialToPersonalItem(updated) },

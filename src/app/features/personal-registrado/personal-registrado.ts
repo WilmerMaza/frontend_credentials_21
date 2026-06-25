@@ -9,6 +9,11 @@ import { LayoutLoadingService } from '../../core/services/layout-loading.service
 import { PersonalListService } from './data/personal-list.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import type { PersonalItem } from './models/personal-item.model';
+import type { StatCard } from './components/personal-metrics/personal-metrics.component';
+import {
+  CREDENTIAL_STATUS_OPTIONS,
+  type CredentialStatusCode,
+} from '../../shared/utils/credential-status.utils';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
 
 // Import subcomponents
@@ -18,12 +23,6 @@ import { PersonalListMobileComponent } from './components/personal-list-mobile/p
 import { PersonalTableDesktopComponent } from './components/personal-table-desktop/personal-table-desktop.component';
 
 export type { PersonalItem };
-
-interface StatCard {
-  label: string;
-  total: number;
-  icon: string;
-}
 
 @Component({
   selector: 'app-personal-registrado',
@@ -67,16 +66,22 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     nombre: new FormControl('', { nonNullable: true }),
     correo: new FormControl('', { nonNullable: true }),
     identificacion: new FormControl('', { nonNullable: true }),
+    estado: new FormControl<CredentialStatusCode | ''>('', { nonNullable: true }),
   });
+
+  readonly statusFilterOptions = CREDENTIAL_STATUS_OPTIONS;
 
   /** Métricas calculadas desde el mismo JSON que la tabla (_allData). */
   readonly statCards = computed<StatCard[]>(() => {
-    const total = this.personalListService.totalRecords();
+    const total = this.personalListService.globalTotalRecords() || this.personalListService.totalRecords();
     const summary = this.personalListService.summary();
+    const expiradas = summary.expiradas ?? 0;
+
     return [
       { label: 'Registrados', total, icon: 'group' },
       { label: 'Activos', total: summary.activas, icon: 'check' },
       { label: 'Inactivos', total: summary.inactivas, icon: 'close' },
+      { label: 'Expiradas', total: expiradas, icon: 'event_busy' },
       { label: 'Pend. credencial', total: summary.pendientes, icon: 'chat_bubble' },
       { label: 'Pendientes', total: summary.pendientes, icon: 'schedule' },
     ];
@@ -84,38 +89,51 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
 
   readonly pageIndex = signal(0);
 
-  private _appliedFilters = signal<{ nombre: string; correo: string; identificacion: string }>({
+  private _appliedFilters = signal<{
+    nombre: string;
+    correo: string;
+    identificacion: string;
+    estado: CredentialStatusCode | '';
+  }>({
     nombre: '',
     correo: '',
     identificacion: '',
+    estado: '',
+  });
+
+  readonly appliedStatusFilter = computed(() => {
+    const estado = this._appliedFilters().estado;
+    return estado || null;
   });
 
   readonly filteredData = computed(() => {
     const data = this._allData();
     const filters = this._appliedFilters();
     const { nombre, correo, identificacion } = filters;
+    const statusFilter = filters.estado || null;
 
     return data.filter((r) => {
       if (nombre && !r.nombreCompleto.toLowerCase().includes(nombre.toLowerCase())) return false;
       if (correo && !r.correo.toLowerCase().includes(correo.toLowerCase())) return false;
       if (identificacion && !r.identificacion.toLowerCase().includes(identificacion.toLowerCase()))
         return false;
+      if (statusFilter && r.estado !== statusFilter) return false;
       return true;
     });
   });
 
-  readonly hasActiveFilters = computed(() => {
+  readonly hasSearchFilters = computed(() => {
     const { nombre, correo, identificacion } = this._appliedFilters();
     return Boolean(nombre || correo || identificacion);
   });
 
   readonly totalRecords = computed(() =>
-    this.hasActiveFilters() ? this.filteredData().length : this.personalListService.totalRecords(),
+    this.hasSearchFilters() ? this.filteredData().length : this.personalListService.totalRecords(),
   );
 
-  /** Registros por página: sin filtros se respeta el `limit` que devuelve el backend. */
+  /** Registros por página: solo búsqueda de texto fuerza paginación local. */
   readonly effectivePageSize = computed(() => {
-    if (!this.hasActiveFilters()) {
+    if (!this.hasSearchFilters()) {
       return this.personalListService.pageSize();
     }
 
@@ -123,7 +141,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   });
 
   readonly totalPages = computed(() => {
-    if (!this.hasActiveFilters()) {
+    if (!this.hasSearchFilters()) {
       return Math.max(1, this.personalListService.totalPages());
     }
 
@@ -190,12 +208,18 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   onSearch(): void {
     this._appliedFilters.set(this.searchForm.getRawValue());
     this.pageIndex.set(0);
+
+    // Sin filtros de texto, o con filtro de estado: recargar desde el API (status va en query).
+    if (!this.hasSearchFilters() || this.appliedStatusFilter()) {
+      this.loadServerPage(0);
+    }
   }
 
   onClearSearch(): void {
-    this.searchForm.reset({ nombre: '', correo: '', identificacion: '' });
-    this._appliedFilters.set({ nombre: '', correo: '', identificacion: '' });
+    this.searchForm.reset({ nombre: '', correo: '', identificacion: '', estado: '' });
+    this._appliedFilters.set({ nombre: '', correo: '', identificacion: '', estado: '' });
     this.pageIndex.set(0);
+    this.loadServerPage(0);
   }
 
   goToPage(page: number): void {
@@ -223,14 +247,18 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
   private loadInitialRecords(): void {
     this.pageIndex.set(0);
     this.pageLoadSub?.unsubscribe();
-    this.pageLoadSub = this.personalListService.loadAll().subscribe();
+    this.pageLoadSub = this.personalListService
+      .loadAll(undefined, undefined, this.appliedStatusFilter())
+      .subscribe();
   }
 
   private loadServerPage(pageIndex: number): void {
     const pageSize = this.personalListService.pageSize();
     this.pageIndex.set(pageIndex);
     this.pageLoadSub?.unsubscribe();
-    this.pageLoadSub = this.personalListService.loadAll(pageIndex + 1, pageSize).subscribe();
+    this.pageLoadSub = this.personalListService
+      .loadAll(pageIndex + 1, pageSize, this.appliedStatusFilter())
+      .subscribe();
   }
 
   private clampCurrentPage(): void {

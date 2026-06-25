@@ -50,6 +50,18 @@
   min-width: 0;
 }
 
+.pr-field select {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  width: 100%;
+  font-weight: 600;
+  color: var(--pr-text);
+  min-width: 0;
+  cursor: pointer;
+  appearance: none;
+}
+
 .pr-field input::placeholder {
   color: #94a3b8;
   font-weight: 600;
@@ -182,6 +194,17 @@
   background: transparent;
   font-weight: 700;
   color: var(--pr-text);
+}
+
+.field select {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-weight: 700;
+  color: var(--pr-text);
+  cursor: pointer;
+  appearance: none;
 }
 
 .field input::placeholder {

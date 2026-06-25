@@ -11,6 +11,7 @@ import {
   type PaginatedCredentialsResponse,
   type PersonalItem,
   getCredentialTypeLabel,
+  deriveValidoHasta,
   mapCredentialToPersonalItem,
 } from '../models/personal-item.model';
 
@@ -24,10 +25,12 @@ export class PersonalListService {
   private readonly _currentPage = signal<number>(1);
   private readonly _pageSize = signal<number>(10);
   private readonly _totalPages = signal<number>(1);
+  private readonly _globalTotalRecords = signal<number>(0);
   private readonly _summary = signal<CredentialStatusSummary>({
     activas: 0,
     inactivas: 0,
     pendientes: 0,
+    expiradas: 0,
   });
 
   /** Señales públicas de solo lectura */
@@ -39,6 +42,7 @@ export class PersonalListService {
   readonly currentPage = this._currentPage.asReadonly();
   readonly pageSize = this._pageSize.asReadonly();
   readonly totalPages = this._totalPages.asReadonly();
+  readonly globalTotalRecords = this._globalTotalRecords.asReadonly();
   readonly summary = this._summary.asReadonly();
 
   constructor(
@@ -48,9 +52,14 @@ export class PersonalListService {
 
   /**
    * GET /credentials
-   * Carga la página solicitada desde el API y la mapea al modelo interno.
+   * Query params: page, limit, status (ACTIVE | PENDING | EXPIRED | TRANSFERRED).
+   * El backend filtra en BD, devuelve total/totalPages filtrados y summary.expiradas.
    */
-  loadAll(page?: number, limit?: number): Observable<CredentialApiResponse[]> {
+  loadAll(
+    page?: number,
+    limit?: number,
+    status?: string | null,
+  ): Observable<CredentialApiResponse[]> {
     const hasExistingData = this._list().length > 0;
 
     // Solo mostramos el esqueleto de carga interno si no hay datos visibles.
@@ -69,12 +78,15 @@ export class PersonalListService {
     if (limit !== undefined) {
       params = params.set('limit', limit);
     }
+    if (status) {
+      params = params.set('status', status);
+    }
 
     return this.enap.get<PaginatedCredentialsResponse>('/credentials', params, context).pipe(
       tap({
         next: (response) => {
           this.assertCredentialsResponse(response);
-          this.applyCredentialsResponse(response);
+          this.applyCredentialsResponse(response, status);
           this._loading.set(false);
           this._syncing.set(false);
         },
@@ -164,6 +176,12 @@ export class PersonalListService {
       (details['force'] as string) ||
       tipoRegistroNombre;
 
+    const fechaIngreso = formatDate(new Date());
+    const validUntilRaw = common.validUntil;
+    const validoHasta = validUntilRaw
+      ? formatDate(new Date(String(validUntilRaw)))
+      : deriveValidoHasta(fechaIngreso);
+
     return {
       id,
       nombreCompleto: fullName,
@@ -175,7 +193,8 @@ export class PersonalListService {
       detallesRegistro: details,
       estado: 'PENDING',
       correo: String(common['institutionalEmail'] ?? `pendiente.${id}@fuerzasarmadas.mil`),
-      fechaIngreso: formatDate(new Date()),
+      fechaIngreso,
+      validoHasta,
       fechaNacimiento: formatDate(new Date(String(common['birthDate'] ?? ''))),
       telefono: String(common['phone'] ?? '') || undefined,
       tipoIdentificacion: String(common['idType'] ?? '') || undefined,
@@ -188,10 +207,16 @@ export class PersonalListService {
     }
   }
 
-  private applyCredentialsResponse(response: PaginatedCredentialsResponse): void {
+  private applyCredentialsResponse(
+    response: PaginatedCredentialsResponse,
+    statusFilter?: string | null,
+  ): void {
     const items = response.data.map(mapCredentialToPersonalItem);
     this._list.set(items);
     this._totalRecords.set(response.total);
+    if (!statusFilter) {
+      this._globalTotalRecords.set(response.total);
+    }
     this._currentPage.set(response.page);
     this._pageSize.set(response.limit);
     this._totalPages.set(response.totalPages);

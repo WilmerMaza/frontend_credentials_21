@@ -1,7 +1,8 @@
 import {
-  normalizeCredentialStatus,
-  type CredentialStatusCode,
-} from '../../../shared/utils/credential-status.utils';
+  parseCredentialDate,
+  resolveEffectiveCredentialStatus,
+} from '../../../shared/utils/credential-expiration.utils';
+import type { CredentialStatusCode } from '../../../shared/utils/credential-status.utils';
 
 export type CredentialTypeCode = 'militar' | 'civil' | 'cadetes' | 'inter-escuelas' | string;
 
@@ -34,6 +35,7 @@ export interface CredentialStatusSummary {
   activas: number;
   inactivas: number;
   pendientes: number;
+  expiradas?: number;
 }
 
 /** Respuesta paginada del API GET /credentials */
@@ -62,12 +64,28 @@ export interface PersonalItem {
   correo: string;
   fechaNacimiento?: string;
   fechaIngreso: string;
+  validoHasta: string;
   telefono?: string;
   tipoIdentificacion?: string;
 }
 
-function mapApiStatus(status?: string | null): CredentialStatusCode {
-  return normalizeCredentialStatus(status);
+export function deriveValidoHasta(fechaIngreso?: string): string {
+  if (!fechaIngreso) return '20/11/2030';
+  try {
+    const parts = fechaIngreso.split(/[/-]/).map(Number);
+    if (parts.length < 3) return '20/11/2030';
+    let d: number, m: number, y: number;
+    if (parts[0]! > 31) {
+      [y, m, d] = [parts[0]!, parts[1]! || 1, parts[2]! || 1];
+    } else {
+      [d, m, y] = [parts[0]! || 1, parts[1]! || 1, parts[2]!];
+    }
+    const date = new Date(y, m - 1, d);
+    date.setFullYear(date.getFullYear() + 5);
+    return date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch {
+    return '20/11/2030';
+  }
 }
 
 /** Convierte la respuesta del API al modelo interno. */
@@ -95,6 +113,11 @@ export function mapCredentialToPersonalItem(c: CredentialApiResponse): PersonalI
     detallesRegistro['force'],
   );
   const fechaNacimiento = formatOptionalDate(c.birthDate);
+  const fechaIngreso = formatDate(new Date(c.createdAt));
+  const expirationReference = resolveExpirationReference(c.expirationDate, detallesRegistro);
+  const validoHasta =
+    formatOptionalDate(expirationReference) ?? deriveValidoHasta(fechaIngreso);
+  const estadoReference = expirationReference ?? validoHasta;
 
   return {
     id: c.id,
@@ -109,10 +132,11 @@ export function mapCredentialToPersonalItem(c: CredentialApiResponse): PersonalI
     tipoRegistroCodigo,
     tipoRegistroNombre,
     detallesRegistro,
-    estado: mapApiStatus(c.status),
+    estado: resolveEffectiveCredentialStatus(c.status, estadoReference),
     correo: c.institutionalEmail,
     fechaNacimiento,
-    fechaIngreso: formatDate(new Date(c.createdAt)),
+    fechaIngreso,
+    validoHasta,
     telefono: nonEmptyString(c.phone),
     tipoIdentificacion: nonEmptyString(c.typeIdentity),
   };
@@ -120,20 +144,16 @@ export function mapCredentialToPersonalItem(c: CredentialApiResponse): PersonalI
 
 export function getCredentialTypeLabel(typeCode: string): string {
   const normalized = normalizeTypeCode(typeCode);
-  if (normalized === 'cadetes' || normalized === 'inter-escuelas') return 'Cadetes';
   if (normalized === 'civil') return 'Personal Civil';
-  return 'Personal Militar';
+  if (normalized === 'militar') return 'Personal Militar';
+  return typeCode;
 }
 
 export function resolveCredentialDisplayName(
   typeCode: string,
   apiName?: string | null,
 ): string {
-  const normalized = normalizeTypeCode(typeCode);
-  if (['militar', 'civil', 'cadetes', 'inter-escuelas'].includes(normalized)) {
-    return getCredentialTypeLabel(typeCode);
-  }
-  return nonEmptyString(apiName) ?? typeCode;
+  return nonEmptyString(apiName) ?? getCredentialTypeLabel(typeCode);
 }
 
 export function normalizeTypeCode(typeCode: string): string {
@@ -194,11 +214,21 @@ function isRecord(value: unknown): value is CredentialDetails {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function formatOptionalDate(value: unknown): string | undefined {
-  const raw = nonEmptyString(value);
-  if (!raw) return undefined;
+function resolveExpirationReference(
+  expirationDate: string | null | undefined,
+  details: CredentialDetails,
+): string | undefined {
+  return (
+    nonEmptyString(expirationDate) ??
+    nonEmptyString(details['validUntil']) ??
+    nonEmptyString(details['valid_until'])
+  );
+}
 
-  return formatDate(new Date(raw));
+function formatOptionalDate(value: unknown): string | undefined {
+  const date = parseCredentialDate(value);
+  if (!date) return undefined;
+  return formatDate(date);
 }
 
 function formatDate(d: Date): string {

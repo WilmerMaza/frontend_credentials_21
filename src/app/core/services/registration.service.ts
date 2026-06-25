@@ -1,7 +1,31 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { EnapApi } from './enap.api';
 import type { CredentialApiResponse } from '../../features/personal-registrado/models/personal-item.model';
+
+export const REGISTRATION_DRAFT_KEY = 'registration_draft';
+export const REGISTRATION_DRAFT_CREDENTIAL_ID_KEY = 'registration_draft_credential_id';
+export const REGISTRATION_FORM_AUTOSAVE_KEY = 'registration_form_autosave';
+
+/** Caché local del formulario en progreso (sobrevive a recargas de página en la misma pestaña). */
+export interface RegistrationFormAutosave {
+  type: string;
+  common: {
+    firstName: string;
+    lastName: string;
+    idType: string;
+    idNumber: string;
+    birthDate: string | null;
+    validUntil: string | null;
+    institutionalEmail: string;
+    phone?: string;
+  };
+  details: Record<string, unknown>;
+  photoDataUrl?: string;
+  emailAvailability?: 'available' | 'duplicate';
+  identityAvailability?: 'available' | 'duplicate';
+  savedAt: string;
+}
 
 /**
  * Payload interno del formulario de registro.
@@ -37,19 +61,92 @@ export function buildFullName(common: RegistrationPayload['common']): string {
 export class RegistrationService {
   constructor(private enap: EnapApi) {}
 
+  static getDraftCredentialId(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(REGISTRATION_DRAFT_CREDENTIAL_ID_KEY);
+  }
+
+  static setDraftCredentialId(id: string): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(REGISTRATION_DRAFT_CREDENTIAL_ID_KEY, id);
+  }
+
+  static clearLegacyDraftCache(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(REGISTRATION_DRAFT_KEY);
+  }
+
+  static clearDraftStorage(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(REGISTRATION_DRAFT_CREDENTIAL_ID_KEY);
+    localStorage.removeItem(REGISTRATION_DRAFT_KEY);
+    RegistrationService.clearFormAutosave();
+  }
+
+  static saveFormAutosave(cache: RegistrationFormAutosave): void {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(REGISTRATION_FORM_AUTOSAVE_KEY, JSON.stringify(cache));
+    } catch (error) {
+      console.warn('No se pudo guardar el progreso del formulario', error);
+    }
+  }
+
+  static loadFormAutosave(): RegistrationFormAutosave | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem(REGISTRATION_FORM_AUTOSAVE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as RegistrationFormAutosave;
+    } catch {
+      return null;
+    }
+  }
+
+  static clearFormAutosave(): void {
+    if (typeof window === 'undefined') return;
+    sessionStorage.removeItem(REGISTRATION_FORM_AUTOSAVE_KEY);
+  }
+
   /** GET /credentials/:id */
   getCredential(id: string): Observable<CredentialApiResponse> {
     return this.enap.get<CredentialApiResponse>(`/credentials/${encodeURIComponent(id)}`);
   }
 
   /**
-   * POST /credentials (multipart/form-data)
+   * Crea o actualiza un borrador en el API con status PENDING.
+   * Reutiliza el id guardado en localStorage para evitar duplicados.
+   */
+  saveDraft(payload: RegistrationPayload, photo?: File): Observable<CredentialApiResponse> {
+    const existingId = RegistrationService.getDraftCredentialId();
+    const draftPayload: UpdateCredentialPayload = { ...payload, status: 'PENDING' };
+
+    if (existingId) {
+      return this.updateRegistration(existingId, draftPayload, photo);
+    }
+
+    const formData = this.buildFormData(draftPayload, photo);
+    formData.append('status', 'PENDING');
+    return this.enap.post<CredentialApiResponse>('/credentials', formData).pipe(
+      tap((created) => RegistrationService.setDraftCredentialId(created.id)),
+    );
+  }
+
+  /**
+   * POST /credentials o PATCH /credentials/:id (multipart/form-data)
+   * Si existe un borrador previo, activa la credencial con PATCH status=ACTIVE.
    */
   submitRegistration(
     payload: RegistrationPayload,
     photo?: File,
+    existingId?: string,
   ): Observable<CredentialApiResponse> {
+    if (existingId) {
+      return this.updateRegistration(existingId, { ...payload, status: 'ACTIVE' }, photo);
+    }
+
     const formData = this.buildFormData(payload, photo);
+    formData.append('status', 'ACTIVE');
     return this.enap.post<CredentialApiResponse>('/credentials', formData);
   }
 
@@ -110,7 +207,12 @@ export class RegistrationService {
 
   private toISODate(value: unknown): string {
     if (!value) return '';
-    if (value instanceof Date) return value.toISOString();
+    if (value instanceof Date) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
     if (typeof value === 'string') return value;
     return '';
   }

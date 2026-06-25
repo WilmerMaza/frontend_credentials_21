@@ -219,11 +219,12 @@
                         >
                           <input
                             matInput
+                            appIdentityInputMask
+                            [identityIdTypeControl]="registrationForm.controls.common.controls.idType"
                             formControlName="idNumber"
-                            placeholder="Ej: 1234567890"
+                            placeholder="Ej: 1.234.567.890"
                             inputmode="numeric"
                             autocomplete="off"
-                            (input)="onDigitsOnlyInput($event, 'idNumber')"
                           />
                           @if (identityAvailability() === 'checking') {
                             <mat-icon matSuffix class="reg-field-status reg-field-status--checking">
@@ -280,9 +281,11 @@
                       <mat-form-field appearance="outline" class="reg-field">
                         <input
                           matInput
+                          appDateInputMask
                           [matDatepicker]="birthPicker"
                           formControlName="birthDate"
                           placeholder="dd/mm/aaaa"
+                          maxlength="10"
                         />
                         <mat-datepicker-toggle matSuffix [for]="birthPicker"></mat-datepicker-toggle>
                         <mat-datepicker #birthPicker></mat-datepicker>
@@ -302,9 +305,11 @@
                       <mat-form-field appearance="outline" class="reg-field">
                         <input
                           matInput
+                          appDateInputMask
                           [matDatepicker]="validUntilPicker"
                           formControlName="validUntil"
-                          placeholder="Válido hasta"
+                          placeholder="dd/mm/aaaa"
+                          maxlength="10"
                           [min]="minValidUntilDate"
                         />
                         <mat-datepicker-toggle matSuffix [for]="validUntilPicker"></mat-datepicker-toggle>
@@ -392,11 +397,11 @@
                       >
                         <input
                           matInput
+                          appPhoneInputMask
                           formControlName="phone"
-                          placeholder="Ej: 3001234567"
-                          inputmode="numeric"
+                          placeholder="Ej: 3001234567 o +78 3013322"
+                          inputmode="tel"
                           autocomplete="tel"
-                          (input)="onDigitsOnlyInput($event, 'phone')"
                         />
                       </mat-form-field>
                       @if (
@@ -505,9 +510,10 @@
             type="button"
             class="reg-btn ui-btn-secondary"
             (click)="onSaveDraft()"
+            [disabled]="savingDraft()"
           >
-            <mat-icon>save</mat-icon>
-            Guardar Borrador
+            <mat-icon>{{ savingDraft() ? 'hourglass_empty' : 'save' }}</mat-icon>
+            {{ savingDraft() ? 'Guardando...' : 'Guardar Borrador' }}
           </button>
           <button
             mat-flat-button

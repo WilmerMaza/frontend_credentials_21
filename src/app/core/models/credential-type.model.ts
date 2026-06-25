@@ -45,6 +45,8 @@ export interface CredentialFieldSchema {
   optionGroupsByParent?: Record<string, CredentialFieldOptionGroup[]>;
   optionLabels?: Record<string, string>;
   hiddenWhen?: CredentialFieldHiddenWhen;
+  /** Mostrar solo cuando todos estos campos tengan valor. */
+  visibleWhenAll?: string[];
   autoValueWhen?: CredentialFieldAutoValueWhen;
   /** Valor inicial cuando no hay initialValues ni valor del usuario. */
   defaultValue?: string;

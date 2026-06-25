@@ -92,3 +92,9 @@ export function institutionalEmailValidator(): ValidatorFn {
 export function isIdentityReadyForLookup(value: string): boolean {
   return sanitizeDigitsInput(value).length >= 5;
 }
+
+/** Identificadores temporales asignados por el backend a borradores incompletos. */
+export function isPlaceholderDraftIdentity(value: unknown): boolean {
+  const normalized = String(value ?? '').trim();
+  return !normalized || /^DRAFT-/i.test(normalized);
+}

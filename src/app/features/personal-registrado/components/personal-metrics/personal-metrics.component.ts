@@ -15,11 +15,15 @@ export interface StatCard {
   styleUrls: ['./personal-metrics.component.scss'],
   template: `
     @if (isMobile()) {
-      <!-- Métricas móvil (scroll horizontal) -->
       <section class="m-metrics">
         @for (card of statCards(); track card.label) {
           <div class="metric">
-            <div class="metric-ico" [class.ok]="card.icon === 'check'" [class.off]="card.icon === 'close'" [class.warn]="card.icon === 'chat_bubble' || card.icon === 'schedule'">
+            <div
+              class="metric-ico"
+              [class.ok]="card.icon === 'check'"
+              [class.off]="card.icon === 'close' || card.icon === 'event_busy'"
+              [class.warn]="card.icon === 'chat_bubble' || card.icon === 'schedule'"
+            >
               <mat-icon>{{ card.icon }}</mat-icon>
             </div>
             <div>
@@ -30,12 +34,16 @@ export interface StatCard {
         }
       </section>
     } @else {
-      <!-- Métricas desktop -->
       <div class="pr-metric-card">
         <div class="pr-metrics">
           @for (card of statCards(); track card.label) {
             <div class="pr-metric">
-              <div class="pr-metric__ico">
+              <div
+                class="pr-metric__ico"
+                [class.pr-metric__ico--ok]="card.icon === 'check'"
+                [class.pr-metric__ico--off]="card.icon === 'close' || card.icon === 'event_busy'"
+                [class.pr-metric__ico--warn]="card.icon === 'chat_bubble' || card.icon === 'schedule'"
+              >
                 <mat-icon>{{ card.icon }}</mat-icon>
               </div>
               <div>
@@ -47,7 +55,7 @@ export interface StatCard {
         </div>
       </div>
     }
-  `
+  `,
 })
 export class PersonalMetricsComponent {
   statCards = input.required<StatCard[]>();

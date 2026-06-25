@@ -1,11 +1,12 @@
 import {
+  deriveValidoHasta,
   getCredentialDetailValue,
   getCredentialTypeLabel,
   normalizeTypeCode,
   type PersonalItem,
 } from '../personal-registrado/models/personal-item.model';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
-import { normalizeCredentialStatus } from '../../shared/utils/credential-status.utils';
+import { resolveEffectiveCredentialStatus } from '../../shared/utils/credential-expiration.utils';
 import type { CredentialData } from './credential-data.types';
 import type { CredentialPdfData } from './credential-view-pdf.component';
 
@@ -23,7 +24,7 @@ export type PersonalItemWithExtras = PersonalItem & {
 
 export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): CredentialData {
   const emision = item.emision ?? item.fechaIngreso ?? '20/11/2025';
-  const validoHasta = item.validoHasta ?? deriveValidoHasta(item.fechaIngreso);
+  const validoHasta = item.validoHasta || deriveValidoHasta(item.fechaIngreso);
   const tipoCodigo = normalizeTypeCode(String(item.tipoRegistroCodigo ?? 'militar'));
   const tipoNombre = item.tipoRegistroNombre || getCredentialTypeLabel(tipoCodigo);
   const variante = getCredentialVariant(tipoCodigo);
@@ -38,7 +39,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
     },
     doc: {
       numeroOficial: item.identificacion,
-      titulo: getCredentialTitle(variante),
+      titulo: getCredentialTitle(variante, tipoNombre),
       subtitulo: `${tipoNombre} - Documento Oficial Certificado`,
     },
     persona: {
@@ -54,7 +55,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
       variante,
     },
     resumen: getCredentialSummary(variante, item),
-    estado: normalizeCredentialStatus(item.estado),
+    estado: resolveEffectiveCredentialStatus(item.estado, item.validoHasta),
     camposPrincipales: buildPrimaryFields(variante, item),
     camposSecundarios: buildSecondaryFields(variante, item),
     contacto: {
@@ -100,24 +101,7 @@ export function buildCredentialPdfData(
   };
 }
 
-export function deriveValidoHasta(fechaIngreso?: string): string {
-  if (!fechaIngreso) return '20/11/2030';
-  try {
-    const parts = fechaIngreso.split(/[/-]/).map(Number);
-    if (parts.length < 3) return '20/11/2030';
-    let d: number, m: number, y: number;
-    if (parts[0]! > 31) {
-      [y, m, d] = [parts[0]!, parts[1]! || 1, parts[2]! || 1];
-    } else {
-      [d, m, y] = [parts[0]! || 1, parts[1]! || 1, parts[2]!];
-    }
-    const date = new Date(y, m - 1, d);
-    date.setFullYear(date.getFullYear() + 5);
-    return date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  } catch {
-    return '20/11/2030';
-  }
-}
+export { deriveValidoHasta };
 
 function getCredentialVariant(typeCode: string): CredentialVariant {
   const normalized = normalizeTypeCode(typeCode);
@@ -128,8 +112,8 @@ function getCredentialVariant(typeCode: string): CredentialVariant {
   return 'militar';
 }
 
-function getCredentialTitle(variant: CredentialVariant): string {
-  if (variant === 'cadetes') return 'CREDENCIAL CADETES';
+function getCredentialTitle(variant: CredentialVariant, tipoNombre: string): string {
+  if (variant === 'cadetes') return `CREDENCIAL ${tipoNombre.toUpperCase()}`;
   if (variant === 'civil') return 'CREDENCIAL PERSONAL CIVIL';
   return 'CREDENCIAL DE IDENTIFICACIÓN';
 }

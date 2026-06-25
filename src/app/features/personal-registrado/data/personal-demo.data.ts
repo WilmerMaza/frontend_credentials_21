@@ -2,7 +2,9 @@
  * Datos de demo para la tabla de personal registrado.
  * Un único origen de verdad: tabla y vista de carnet usan estos datos.
  */
-export const PERSONAL_DEMO_DATA = [
+import { deriveValidoHasta } from '../models/personal-item.model';
+
+const PERSONAL_DEMO_RAW = [
   {
     id: '1',
     nombreCompleto: 'Juan Pérez',
@@ -235,3 +237,8 @@ export const PERSONAL_DEMO_DATA = [
     fechaIngreso: '21/08/2024',
   },
 ];
+
+export const PERSONAL_DEMO_DATA = PERSONAL_DEMO_RAW.map((item) => ({
+  ...item,
+  validoHasta: deriveValidoHasta(item.fechaIngreso),
+}));

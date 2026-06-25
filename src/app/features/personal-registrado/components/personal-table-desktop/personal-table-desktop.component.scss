@@ -46,6 +46,24 @@
   z-index: 2;
 }
 
+.pr-table thead th.pr-vigencia-col,
+.pr-table tbody td.pr-vigencia-col {
+  padding-left: 24px;
+}
+
+.pr-table thead th.pr-type-col,
+.pr-table tbody td.pr-type-col {
+  text-align: center;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.pr-table thead th.pr-actions-col,
+.pr-table tbody td.pr-actions-col {
+  text-align: right;
+  padding-left: 28px;
+}
+
 .pr-table thead th:last-child {
   text-align: right;
 }
@@ -170,12 +188,13 @@
 .pr-type-badge {
   display: inline-flex;
   max-width: 100%;
-  padding: 5px 9px;
+  padding: 7px 12px;
   border-radius: 999px;
   background: #eef2ff;
   color: #1e3a8a;
   border: 1px solid #c7d2fe;
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 1.2;
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;

@@ -24,13 +24,13 @@ import type { PersonalItem } from '../../models/personal-item.model';
       <table class="pr-table">
         <colgroup>
           <col style="width: 5%" />
-          <col style="width: 16%" />
+          <col style="width: 15%" />
           <col style="width: 12%" />
-          <col style="width: 21%" />
+          <col style="width: 17%" />
           <col style="width: 10%" />
-          <col style="width: 10%" />
-          <col style="width: 12%" />
-          <col style="width: 14%" />
+          <col style="width: 9%" />
+          <col style="width: 24%" />
+          <col style="width: 8%" />
         </colgroup>
         <thead>
           <tr>
@@ -38,10 +38,10 @@ import type { PersonalItem } from '../../models/personal-item.model';
             <th>Nombre completo</th>
             <th>Identificación</th>
             <th>Correo institucional</th>
-            <th>Fecha ingreso</th>
             <th>Estado</th>
-            <th>Tipo de registro</th>
-            <th>Acciones</th>
+            <th class="pr-vigencia-col">Vigencia</th>
+            <th class="pr-type-col">Tipo de registro</th>
+            <th class="pr-actions-col">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -70,19 +70,19 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <td class="pr-email">
                   <span class="skeleton" style="width: 160px; height: 16px;"></span>
                 </td>
-                <td class="pr-date">
-                  <span class="skeleton" style="width: 80px; height: 16px;"></span>
-                </td>
                 <td>
                   <span
                     class="skeleton"
                     style="display: inline-block; width: 80px; height: 26px; border-radius: 999px;"
                   ></span>
                 </td>
+                <td class="pr-date pr-vigencia-col">
+                  <span class="skeleton" style="width: 80px; height: 16px;"></span>
+                </td>
                 <td>
                   <span class="skeleton" style="display: inline-block; width: 100px; height: 24px; border-radius: 999px;"></span>
                 </td>
-                <td>
+                <td class="pr-actions-col">
                   <div class="pr-actions">
                     <div
                       class="skeleton"
@@ -124,7 +124,6 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <td class="pr-id">{{ row.identificacion }}</td>
 
                 <td class="pr-email">{{ row.correo }}</td>
-                <td class="pr-date">{{ row.fechaIngreso }}</td>
                 <td>
                   <span
                     class="pr-badge"
@@ -137,10 +136,11 @@ import type { PersonalItem } from '../../models/personal-item.model';
                     {{ getCredentialStatusLabel(row.estado) }}
                   </span>
                 </td>
-                <td>
+                <td class="pr-date pr-vigencia-col">{{ row.validoHasta }}</td>
+                <td class="pr-type-col">
                   <span class="pr-type-badge">{{ row.tipoRegistroNombre }}</span>
                 </td>
-                <td>
+                <td class="pr-actions-col">
                   <div class="pr-actions">
                     <button
                       class="pr-icon-btn"

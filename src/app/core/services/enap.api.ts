@@ -21,9 +21,9 @@ export class EnapApi {
   }
 
   /** POST para enviar datos al servidor */
-  post<T>(endpoint: string, body: any): Observable<T> {
+  post<T>(endpoint: string, body: any, context?: HttpContext): Observable<T> {
     return this.http
-      .post<T>(`${this.baseUrl}${endpoint}`, body, {withCredentials: true})
+      .post<T>(`${this.baseUrl}${endpoint}`, body, { withCredentials: true, context })
       .pipe(catchError(this.handleError));
   }
 

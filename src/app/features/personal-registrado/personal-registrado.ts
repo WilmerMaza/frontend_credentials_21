@@ -87,6 +87,8 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     ];
   });
 
+  readonly PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+  readonly pageSize = this.personalListService.pageSize;
   readonly pageIndex = signal(0);
 
   private _appliedFilters = signal<{
@@ -234,6 +236,17 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     }
   }
 
+  onPageSizeChange(size: number): void {
+    const limit = Number(size);
+    if (!this.PAGE_SIZE_OPTIONS.includes(limit as 10 | 20 | 50)) return;
+    if (this.loading() || this.syncing()) return;
+    if (limit === this.pageSize()) return;
+
+    this.pageIndex.set(0);
+    this.pageLoadSub?.unsubscribe();
+    this.pageLoadSub = this.personalListService.loadAll(1, limit).subscribe();
+  }
+
   getPaginationHint(): string {
     const total = this.totalRecords();
     if (total === 0) return 'Mostrando 0 registros';
@@ -248,7 +261,7 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     this.pageIndex.set(0);
     this.pageLoadSub?.unsubscribe();
     this.pageLoadSub = this.personalListService
-      .loadAll(undefined, undefined, this.appliedStatusFilter())
+      .loadAll(1, this.personalListService.pageSize(), this.appliedStatusFilter())
       .subscribe();
   }
 

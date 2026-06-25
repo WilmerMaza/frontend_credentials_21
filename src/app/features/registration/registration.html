@@ -490,7 +490,7 @@
 
       <!-- Botones de acción al final del formulario -->
       <div class="reg-actions-bar">
-        @let blockers = getSubmitBlockers();
+        @let blockers = submitBlockers();
         @if (!canSubmitForm() && blockers.length > 0) {
           <div class="reg-submit-checklist" role="status" aria-live="polite">
             <p class="reg-submit-checklist__title">
@@ -519,11 +519,15 @@
             mat-flat-button
             type="button"
             class="reg-btn reg-btn--primary ui-btn-primary"
+            [class.reg-btn--ready]="canSubmitForm()"
+            [class.reg-btn--incomplete]="!canSubmitForm() && !submitting()"
+            [class.reg-btn--submitting]="submitting()"
             (click)="onSubmit()"
             [disabled]="!canSubmitForm()"
+            [attr.aria-disabled]="!canSubmitForm()"
           >
-            <mat-icon>{{ submitting() ? 'hourglass_empty' : 'check_circle' }}</mat-icon>
-            {{ submitting() ? 'Procesando...' : 'Finalizar Registro' }}
+            <mat-icon>{{ getSubmitButtonIcon() }}</mat-icon>
+            {{ getSubmitButtonLabel() }}
           </button>
         </div>
       </div>

@@ -18,11 +18,28 @@ import type { PersonalItem } from '../../models/personal-item.model';
     <section class="list-card">
       <div class="list-head">
         <div class="list-title">Registros</div>
-        <div class="list-hint">
-          @if (syncing()) {
-            <span class="m-syncing-text" style="color: var(--pr-navy); font-weight: bold; animation: pulse 1.5s infinite;">Actualizando...</span>
-          } @else {
-            {{ paginationHint() }}
+        <div class="list-head__meta">
+          <div class="list-hint">
+            @if (syncing()) {
+              <span class="m-syncing-text" style="color: var(--pr-navy); font-weight: bold; animation: pulse 1.5s infinite;">Actualizando...</span>
+            } @else {
+              {{ paginationHint() }}
+            }
+          </div>
+          @if (showPageSize()) {
+            <label class="m-page-size">
+              <span class="m-page-size__label">Filas</span>
+              <select
+                class="m-page-size__select"
+                [value]="pageSize()"
+                [disabled]="loading() || syncing()"
+                (change)="onPageSizeSelect($event)"
+              >
+                @for (opt of pageSizeOptions(); track opt) {
+                  <option [value]="opt">{{ opt }}</option>
+                }
+              </select>
+            </label>
           }
         </div>
       </div>
@@ -160,11 +177,15 @@ export class PersonalListMobileComponent {
   pageIndex = input.required<number>();
   totalPages = input.required<number>();
   pageNumbers = input.required<(number | string)[]>();
+  pageSize = input<number>(10);
+  pageSizeOptions = input<readonly number[]>([10, 20, 50]);
+  showPageSize = input<boolean>(true);
 
   view = output<PersonalItem>();
   edit = output<PersonalItem>();
   delete = output<PersonalItem>();
   pageChange = output<number>();
+  pageSizeChange = output<number>();
 
   readonly getPhotoUrl = getPhotoUrl;
   readonly getCredentialStatusLabel = getCredentialStatusLabel;
@@ -174,5 +195,11 @@ export class PersonalListMobileComponent {
     if (page >= 0 && page < this.totalPages()) {
       this.pageChange.emit(page);
     }
+  }
+
+  onPageSizeSelect(event: Event): void {
+    const value = Number((event.target as HTMLSelectElement).value);
+    if (!Number.isFinite(value)) return;
+    this.pageSizeChange.emit(value);
   }
 }

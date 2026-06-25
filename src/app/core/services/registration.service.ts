@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { HttpContext } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { EnapApi } from './enap.api';
+import { BYPASS_SPINNER } from '../interceptors/loading.interceptor';
 import type { CredentialApiResponse } from '../../features/personal-registrado/models/personal-item.model';
 
 export const REGISTRATION_DRAFT_KEY = 'registration_draft';
@@ -147,7 +149,8 @@ export class RegistrationService {
 
     const formData = this.buildFormData(payload, photo);
     formData.append('status', 'ACTIVE');
-    return this.enap.post<CredentialApiResponse>('/credentials', formData);
+    const context = new HttpContext().set(BYPASS_SPINNER, true);
+    return this.enap.post<CredentialApiResponse>('/credentials', formData, context);
   }
 
   /**

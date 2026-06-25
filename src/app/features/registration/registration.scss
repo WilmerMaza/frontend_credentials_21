@@ -870,6 +870,13 @@ $accent: #1e5f74;
   background: $navy !important;
   color: #fff !important;
   box-shadow: 0 4px 12px rgba(12, 46, 87, 0.2) !important;
+  border: 2px solid transparent;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 
   &:hover:not(:disabled) {
     background: $navy-light !important;
@@ -881,7 +888,47 @@ $accent: #1e5f74;
     transform: translateY(0);
   }
 
-  &:disabled {
+  /* Formulario incompleto: aspecto atenuado, claramente no accionable */
+  &.reg-btn--incomplete:disabled {
+    background: #e2e8f0 !important;
+    color: #64748b !important;
+    border-color: #cbd5e1 !important;
+    opacity: 1 !important;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none !important;
+
+    mat-icon {
+      color: #94a3b8 !important;
+    }
+  }
+
+  /* Listo para enviar */
+  &.reg-btn--ready:not(:disabled) {
+    background: linear-gradient(180deg, $navy-light 0%, $navy 100%) !important;
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 6px 16px rgba(12, 46, 87, 0.28) !important;
+
+    mat-icon {
+      color: #bbf7d0 !important;
+    }
+  }
+
+  /* Enviando */
+  &.reg-btn--submitting:disabled {
+    background: $navy-light !important;
+    color: #fff !important;
+    opacity: 0.92 !important;
+    cursor: wait;
+    box-shadow: 0 2px 8px rgba(12, 46, 87, 0.15) !important;
+
+    mat-icon {
+      animation: reg-field-pulse 1.2s ease-in-out infinite;
+    }
+  }
+
+  &:disabled:not(.reg-btn--incomplete):not(.reg-btn--submitting) {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;

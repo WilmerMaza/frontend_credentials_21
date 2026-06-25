@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   afterNextRender,
+  computed,
   DestroyRef,
   ElementRef,
   EnvironmentInjector,
@@ -24,7 +25,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
-import { debounceTime, distinctUntilChanged, filter, firstValueFrom, switchMap, tap } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, finalize, firstValueFrom, switchMap, tap } from 'rxjs';
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
 import {
   mapCredentialToPersonalItem,
@@ -139,6 +140,8 @@ export class Registration implements OnDestroy {
   draftCredentialId = signal<string | null>(null);
   private originalEmail = signal('');
   private originalIdentity = signal('');
+  hasPhotoSelected = signal(false);
+  private readonly formRevision = signal(0);
   selectedPhoto?: File;
   photoPreviewUrl = signal<string | null>(null);
   photoRequired = signal(false);
@@ -211,16 +214,21 @@ export class Registration implements OnDestroy {
   // ✅ solo lo llama el select "type"
   onTypeChange(next: RegistrationType): void {
     Object.keys(this.detailsGroup.controls).forEach((k) => this.detailsGroup.removeControl(k));
-    this.detailsGroup.reset();
+    this.detailsGroup.reset({}, { emitEvent: false });
     this.detailsInitialValues.set({});
     const selected = this.credentialTypes().find((type) => type.code === next);
-    this.activeSchema.set(selected?.schema ?? { fields: [] });
+    const schema = selected?.schema ?? { fields: [] };
+    this.activeSchema.set({
+      fields: [...(schema.fields ?? [])],
+    });
+    this.bumpFormRevision();
   }
 
   constructor() {
     this.layoutLoading.setLoading(false);
     this.setupRealtimeValidators();
     this.setupFormAutosave();
+    this.setupFormRevisionTracking();
     void this.loadCredentialTypes();
   }
 
@@ -258,9 +266,34 @@ export class Registration implements OnDestroy {
     return blockers;
   }
 
+  private setupFormRevisionTracking(): void {
+    this.registrationForm.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.bumpFormRevision());
+
+    this.registrationForm.statusChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.bumpFormRevision());
+  }
+
+  private bumpFormRevision(): void {
+    this.formRevision.update((value) => value + 1);
+  }
+
+  readonly submitBlockers = computed(() => {
+    this.formRevision();
+    this.activeSchema();
+    this.emailAvailability();
+    this.identityAvailability();
+    this.submitting();
+    this.hasPhotoSelected();
+    this.photoRequired();
+    return this.computeSubmitBlockers();
+  });
+
   canSubmitForm(): boolean {
     if (this.submitting()) return false;
-    if (!this.selectedPhoto) return false;
+    if (!this.hasPhotoSelected()) return false;
     if (this.registrationForm.invalid || this.detailsGroup.invalid) return false;
     if (this.emailAvailability() === 'checking' || this.identityAvailability() === 'checking') {
       return false;
@@ -280,6 +313,18 @@ export class Registration implements OnDestroy {
     return true;
   }
 
+  getSubmitButtonLabel(): string {
+    if (this.submitting()) return 'Procesando...';
+    if (this.canSubmitForm()) return 'Finalizar Registro';
+    return 'Complete el formulario';
+  }
+
+  getSubmitButtonIcon(): string {
+    if (this.submitting()) return 'hourglass_empty';
+    if (this.canSubmitForm()) return 'check_circle';
+    return 'pending_actions';
+  }
+
   isEmailVerified(): boolean {
     const email = String(
       this.registrationForm.controls.common.controls.institutionalEmail.value ?? '',
@@ -297,6 +342,10 @@ export class Registration implements OnDestroy {
   }
 
   getSubmitBlockers(): string[] {
+    return this.submitBlockers();
+  }
+
+  private computeSubmitBlockers(): string[] {
     if (this.canSubmitForm()) return [];
 
     const blockers: string[] = [];
@@ -306,7 +355,7 @@ export class Registration implements OnDestroy {
       return blockers;
     }
 
-    if (!this.selectedPhoto) {
+    if (!this.hasPhotoSelected()) {
       blockers.push('Foto para credencial');
     }
 
@@ -595,6 +644,7 @@ export class Registration implements OnDestroy {
     this.photoPreviewUrl.set(dataUrl);
     this.cachedPhotoDataUrl = dataUrl;
     this.selectedPhoto = this.dataUrlToFile(dataUrl, 'credencial-foto.jpg');
+    this.hasPhotoSelected.set(true);
     this.photoRequired.set(false);
   }
 
@@ -710,6 +760,7 @@ export class Registration implements OnDestroy {
 
       if (credential.imagePath) {
         this.photoPreviewUrl.set(getPhotoUrl(credential.imagePath));
+        this.hasPhotoSelected.set(true);
       }
     }
 
@@ -911,6 +962,7 @@ export class Registration implements OnDestroy {
         if (!blob) return;
         const file = new File([blob], 'foto-captura.jpg', { type: 'image/jpeg' });
         this.selectedPhoto = file;
+        this.hasPhotoSelected.set(true);
         const prev = this.photoPreviewUrl();
         if (prev) URL.revokeObjectURL(prev);
         this.photoPreviewUrl.set(URL.createObjectURL(blob));
@@ -955,6 +1007,7 @@ export class Registration implements OnDestroy {
     }
 
     this.selectedPhoto = file;
+    this.hasPhotoSelected.set(true);
     const prev = this.photoPreviewUrl();
     if (prev) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(URL.createObjectURL(file));
@@ -1085,6 +1138,7 @@ export class Registration implements OnDestroy {
     this.onTypeChange(defaultType);
 
     this.selectedPhoto = undefined;
+    this.hasPhotoSelected.set(false);
     const prev = this.photoPreviewUrl();
     if (prev) URL.revokeObjectURL(prev);
     this.photoPreviewUrl.set(null);
@@ -1133,7 +1187,7 @@ export class Registration implements OnDestroy {
     this.registrationForm.markAllAsTouched();
     this.detailsGroup.markAllAsTouched();
 
-    if (!this.selectedPhoto) {
+    if (!this.hasPhotoSelected()) {
       this.photoRequired.set(true);
       this.identitySectionExpanded.set(true);
     }
@@ -1206,16 +1260,17 @@ export class Registration implements OnDestroy {
     const existingId = this.resolveSubmitCredentialId(email, idNumber);
 
     this.submitting.set(true);
-    try {
-      const created = await firstValueFrom(
-        this.registrationService.submitRegistration(payload, this.selectedPhoto, existingId),
-      );
-      await this.handleRegistrationSuccess(created, raw.common);
-    } catch (err) {
-      await this.showRegistrationError(err, email);
-    } finally {
-      this.submitting.set(false);
-    }
+    this.registrationService
+      .submitRegistration(payload, this.selectedPhoto, existingId)
+      .pipe(finalize(() => this.submitting.set(false)))
+      .subscribe({
+        next: (created) => {
+          void this.handleRegistrationSuccess(created, raw.common);
+        },
+        error: (err) => {
+          void this.showRegistrationError(err, email);
+        },
+      });
   }
 
   private async showRegistrationError(err: unknown, email?: string): Promise<void> {
@@ -1264,7 +1319,7 @@ export class Registration implements OnDestroy {
   };
 
   private collectMissingFields(): string[] {
-    return this.getSubmitBlockers();
+    return this.submitBlockers();
   }
 
   private expandSectionsForMissing(missing: string[]): void {

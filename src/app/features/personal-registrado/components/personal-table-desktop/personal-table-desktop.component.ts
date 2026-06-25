@@ -184,7 +184,24 @@ import type { PersonalItem } from '../../models/personal-item.model';
 
     <!-- Footer -->
     <div class="pr-table-footer">
-      <div class="pr-hint">{{ paginationHint() }}</div>
+      <div class="pr-footer-left">
+        <div class="pr-hint">{{ paginationHint() }}</div>
+        @if (showPageSize()) {
+          <label class="pr-page-size">
+            <span class="pr-page-size__label">Filas por página</span>
+            <select
+              class="pr-page-size__select"
+              [value]="pageSize()"
+              [disabled]="loading() || syncing()"
+              (change)="onPageSizeSelect($event)"
+            >
+              @for (opt of pageSizeOptions(); track opt) {
+                <option [value]="opt">{{ opt }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
       <div class="pr-pager">
         <button
           class="pr-page"
@@ -229,11 +246,15 @@ export class PersonalTableDesktopComponent {
   pageIndex = input.required<number>();
   totalPages = input.required<number>();
   pageNumbers = input.required<(number | string)[]>();
+  pageSize = input<number>(10);
+  pageSizeOptions = input<readonly number[]>([10, 20, 50]);
+  showPageSize = input<boolean>(true);
 
   view = output<PersonalItem>();
   edit = output<PersonalItem>();
   delete = output<PersonalItem>();
   pageChange = output<number>();
+  pageSizeChange = output<number>();
 
   readonly getPhotoUrl = getPhotoUrl;
   readonly getCredentialStatusLabel = getCredentialStatusLabel;
@@ -243,5 +264,11 @@ export class PersonalTableDesktopComponent {
     if (page >= 0 && page < this.totalPages()) {
       this.pageChange.emit(page);
     }
+  }
+
+  onPageSizeSelect(event: Event): void {
+    const value = Number((event.target as HTMLSelectElement).value);
+    if (!Number.isFinite(value)) return;
+    this.pageSizeChange.emit(value);
   }
 }

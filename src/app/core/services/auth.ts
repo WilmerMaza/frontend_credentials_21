@@ -1,23 +1,38 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { EnapApi } from './enap.api';
+import { CsrfService } from './csrf.service';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  personId?: string;
+}
+
+export interface AuthSessionSummary {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  expiresAt: string;
+  current: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  /** Estado del usuario autenticado (null = sin sesión) */
-  private readonly _user = signal<any | null>(null);
+  private readonly _user = signal<AuthUser | null>(null);
 
   readonly user = this._user.asReadonly();
 
   constructor(
     private api: EnapApi,
     private router: Router,
+    private csrf: CsrfService,
   ) {}
 
-  // ─── Getters de conveniencia ─────────────────────────────────────────────────
-
-  getUser(): any | null {
+  getUser(): AuthUser | null {
     return this._user();
   }
 
@@ -25,9 +40,7 @@ export class AuthService {
     return !!this._user();
   }
 
-  // ─── Mutaciones de estado ────────────────────────────────────────────────────
-
-  setUser(u: any): void {
+  setUser(u: AuthUser | null): void {
     this._user.set(u);
   }
 
@@ -35,61 +48,70 @@ export class AuthService {
     this._user.set(null);
   }
 
-  // ─── API calls ───────────────────────────────────────────────────────────────
-
-  /**
-   * POST /auth/login
-   * El backend setea la cookie httpOnly con el access-token y refresh-token.
-   * No devuelve el usuario; tras el login llamamos a `me()` para hidratar el estado.
-   */
   login(credentials: { email: string; password: string }): Observable<void> {
-    return this.api.post<void>('/auth/login', credentials);
+    return this.api
+      .post<{ csrfToken?: string }>('/auth/login', credentials)
+      .pipe(
+        tap((response) => {
+          if (response?.csrfToken) {
+            this.csrf.setToken(response.csrfToken);
+          }
+        }),
+        map(() => undefined),
+      );
   }
 
-  /**
-   * GET /auth/me
-   * Obtiene el perfil del usuario autenticado a partir de la cookie httpOnly.
-   * Se usa al arranque de la app y después del login.
-   */
-  me(): Observable<any> {
-    return this.api.get<any>('/auth/me').pipe(tap((user) => this.setUser(user)));
+  me(): Observable<AuthUser> {
+    return this.api.get<AuthUser>('/auth/me').pipe(tap((user) => this.setUser(user)));
   }
 
-  /**
-   * POST /auth/refresh
-   * Renueva el access-token usando el refresh-token (httpOnly cookie).
-   * Lo llama el refreshInterceptor automáticamente al recibir un 401.
-   */
   refresh(): Observable<void> {
     return this.api.post<void>('/auth/refresh', {});
   }
 
-  /**
-   * POST /auth/logout
-   * Invalida la sesión en el backend y limpia el estado local.
-   * Redirige a /login.
-   */
   logout(): Observable<void> {
     return this.api.post<void>('/auth/logout', {}).pipe(
       tap({
         next: () => {
           this.clearUser();
+          this.csrf.setToken(null);
           this.router.navigate(['/login']);
         },
         error: () => {
-          // Aunque falle el backend, limpiar estado local y redirigir
           this.clearUser();
+          this.csrf.setToken(null);
           this.router.navigate(['/login']);
         },
       }),
     );
   }
 
-  /**
-   * @deprecated Usa `me()` directamente.
-   * Mantenido por compatibilidad con código existente.
-   */
-  loadSession(): Observable<any> {
+  changePassword(payload: {
+    currentPassword: string;
+    newPassword: string;
+  }): Observable<{ message: string }> {
+    return this.api.post<{ message: string }>('/auth/change-password', payload).pipe(
+      tap(() => {
+        this.clearUser();
+        this.csrf.setToken(null);
+        this.router.navigate(['/login']);
+      }),
+    );
+  }
+
+  getSessions(): Observable<AuthSessionSummary[]> {
+    return this.api.get<AuthSessionSummary[]>('/auth/sessions');
+  }
+
+  revokeSession(sessionId: string): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(`/auth/sessions/${sessionId}`);
+  }
+
+  getAdminSessions(userId: string): Observable<AuthSessionSummary[]> {
+    return this.api.get<AuthSessionSummary[]>(`/auth/admin/sessions/${userId}`);
+  }
+
+  loadSession(): Observable<AuthUser> {
     return this.me();
   }
 }

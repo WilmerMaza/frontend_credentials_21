@@ -17,10 +17,11 @@ let refreshDone$: ReplaySubject<boolean> | null = null;
 export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
   // Excluir endpoints de auth para evitar bucles infinitos
   const isAuthUrl =
-    req.url.includes('/login/refresh') ||
-    req.url.includes('/login/logout') ||
-    req.url.includes('/login/me') ||
-    req.url.includes('/login');
+    req.url.includes('/auth/refresh') ||
+    req.url.includes('/auth/logout') ||
+    req.url.includes('/auth/me') ||
+    req.url.includes('/auth/login') ||
+    req.url.includes('/auth/session');
 
   const isPublicVerifyUrl = req.url.includes('/verify');
 

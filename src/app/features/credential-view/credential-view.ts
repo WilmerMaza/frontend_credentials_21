@@ -159,7 +159,7 @@ export class CredentialView implements OnInit, OnDestroy {
       ...cred,
       fechaNacimiento: ext.fechaNacimiento,
       emision: ext.emision ?? cred.fechaIngreso ?? '20/11/2025',
-      validoHasta: ext.validoHasta ?? deriveValidoHasta(cred.fechaIngreso),
+      validoHasta: cred.validoHasta || deriveValidoHasta(cred.fechaIngreso),
       sha256: ext.sha256 ?? 'A3F7C92E...4D8B92E1',
     });
     this.credential.set(extended);

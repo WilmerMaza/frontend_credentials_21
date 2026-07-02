@@ -22,7 +22,7 @@
 
 .pr-metrics {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 0;
 }
 
@@ -33,6 +33,15 @@
   padding: 10px 12px;
   border-right: 1px solid var(--pr-border);
   min-width: 0;
+}
+
+.pr-metric:hover {
+  background: transparent;
+}
+
+.pr-metric--active {
+  background: transparent;
+  box-shadow: none;
 }
 
 .pr-metric:last-child {
@@ -51,6 +60,20 @@
 
 .pr-metric__ico mat-icon {
   color: var(--pr-navy);
+}
+
+.pr-metric__ico--ok {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.pr-metric__ico--off {
+  background: #f1f5f9;
+}
+
+.pr-metric__ico--warn {
+  background: #fffbeb;
+  border-color: #fde68a;
 }
 
 .pr-metric__val {
@@ -87,6 +110,12 @@
   align-items: center;
   gap: 12px;
   scroll-snap-align: start;
+}
+
+.metric--active {
+  border-color: var(--pr-border);
+  background: var(--pr-card);
+  box-shadow: var(--pr-shadow-soft);
 }
 
 .metric-ico {

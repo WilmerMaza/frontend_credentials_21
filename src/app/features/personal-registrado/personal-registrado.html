@@ -13,6 +13,7 @@
       <app-personal-search
         [isMobile]="true"
         [searchForm]="searchForm"
+        [statusOptions]="statusFilterOptions"
         [(filtersExpanded)]="filtersExpanded"
         (search)="onSearch()"
         (clearSearch)="onClearSearch()"
@@ -35,7 +36,7 @@
         [pageNumbers]="pageNumbers()"
         [pageSize]="pageSize()"
         [pageSizeOptions]="PAGE_SIZE_OPTIONS"
-        [showPageSize]="!hasActiveFilters()"
+        [showPageSize]="!hasSearchFilters()"
         (view)="onView($event)"
         (edit)="onEdit($event)"
         (delete)="onDelete($event)"
@@ -74,6 +75,7 @@
       <app-personal-search
         [isMobile]="false"
         [searchForm]="searchForm"
+        [statusOptions]="statusFilterOptions"
         [(filtersExpanded)]="filtersExpanded"
         (search)="onSearch()"
         (clearSearch)="onClearSearch()"
@@ -95,7 +97,7 @@
         [pageNumbers]="pageNumbers()"
         [pageSize]="pageSize()"
         [pageSizeOptions]="PAGE_SIZE_OPTIONS"
-        [showPageSize]="!hasActiveFilters()"
+        [showPageSize]="!hasSearchFilters()"
         (view)="onView($event)"
         (edit)="onEdit($event)"
         (delete)="onDelete($event)"

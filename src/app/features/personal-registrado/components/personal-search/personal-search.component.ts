@@ -2,6 +2,12 @@ import { Component, input, model, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import type { CredentialStatusCode } from '../../../../shared/utils/credential-status.utils';
+
+export interface StatusFilterOption {
+  value: CredentialStatusCode;
+  label: string;
+}
 
 @Component({
   selector: 'app-personal-search',
@@ -10,7 +16,6 @@ import { MatIconModule } from '@angular/material/icon';
   styleUrls: ['./personal-search.component.scss'],
   template: `
     @if (isMobile()) {
-      <!-- Acordeón filtros + CTA (Móvil) -->
       <section class="card">
         <div class="accordion">
           <button type="button" class="accordion-head" (click)="toggleFilters()">
@@ -50,6 +55,15 @@ import { MatIconModule } from '@angular/material/icon';
                   placeholder="Número de identificación"
                 />
               </div>
+              <div class="field field--select">
+                <mat-icon>flag</mat-icon>
+                <select [formControl]="$any(searchForm().get('estado'))">
+                  <option value="">Todos los estados</option>
+                  @for (option of statusOptions(); track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </div>
               <div class="btn-row">
                 <button type="button" class="btn primary" (click)="search.emit()">
                   <mat-icon>filter_list</mat-icon>
@@ -66,7 +80,6 @@ import { MatIconModule } from '@angular/material/icon';
         </button>
       </section>
     } @else {
-      <!-- Filtros Desktop -->
       <div class="pr-filters-accordion">
         <button
           type="button"
@@ -108,6 +121,15 @@ import { MatIconModule } from '@angular/material/icon';
               placeholder="Número de identificación"
             />
           </div>
+          <div class="pr-field pr-field--select">
+            <mat-icon>flag</mat-icon>
+            <select [formControl]="$any(searchForm().get('estado'))">
+              <option value="">Todos los estados</option>
+              @for (option of statusOptions(); track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
           <button type="button" class="pr-btn primary" (click)="search.emit()">
             <mat-icon>filter_list</mat-icon>
             Buscar
@@ -116,11 +138,12 @@ import { MatIconModule } from '@angular/material/icon';
         </div>
       </div>
     }
-  `
+  `,
 })
 export class PersonalSearchComponent {
   isMobile = input<boolean>(false);
   searchForm = input.required<FormGroup<any>>();
+  statusOptions = input<StatusFilterOption[]>([]);
   filtersExpanded = model<boolean>(false);
 
   search = output<void>();

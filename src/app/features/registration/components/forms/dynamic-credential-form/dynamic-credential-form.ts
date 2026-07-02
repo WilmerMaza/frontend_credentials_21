@@ -27,16 +27,14 @@ import type {
   CredentialFieldSchema,
   CredentialTypeSchema,
 } from '../../../../../core/models/credential-type.model';
-import {
-  CADETE_ASPIRANT_DEFAULTS,
-  normalizeCadeteDetailValues,
-} from '../../../../../shared/utils/cadete-schema.utils';
 import { getDynamicFieldErrorMessage } from '../../../../../shared/utils/dynamic-field-error.utils';
 import { institutionalEmailValidator } from '../../../../../shared/utils/registration-validation.utils';
 
 const FIELD_ICONS: Record<string, string> = {
   force: 'shield',
   category: 'category',
+  categoria: 'category',
+  categorie: 'category',
   grades: 'military_tech',
   grado: 'military_tech',
   unit: 'groups',
@@ -65,13 +63,8 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
   sport: 'Ej: Natación, Atletismo...',
   course: 'Seleccione curso',
   curso: 'Seleccione curso',
-};
-
-/** Si el API usa dependsOn legacy (grades, company…), leer el control canónico. */
-const PARENT_FIELD_ALIASES: Record<string, string[]> = {
-  grado: ['grades', 'rank'],
-  compania: ['company', 'unit', 'sport'],
-  curso: ['course'],
+  categoria: 'Seleccione categoría de alumno',
+  category: 'Seleccione categoría de alumno',
 };
 
 @Component({
@@ -167,6 +160,13 @@ export class DynamicCredentialForm implements OnChanges {
   }
 
   isFieldVisible(field: CredentialFieldSchema): boolean {
+    if (field.visibleWhenAll?.length) {
+      for (const name of field.visibleWhenAll) {
+        const value = String(this.group.get(name)?.value ?? '').trim();
+        if (!value) return false;
+      }
+    }
+
     if (field.hiddenWhen) {
       const refValue = String(this.group.get(field.hiddenWhen.field)?.value ?? '')
         .trim()
@@ -283,7 +283,7 @@ export class DynamicCredentialForm implements OnChanges {
   private normalizeInitialValues(
     source: Record<string, unknown> | null,
   ): Record<string, unknown> {
-    return normalizeCadeteDetailValues(source);
+    return source ? { ...source } : {};
   }
 
   private setupCascadeHandlers(): void {
@@ -295,7 +295,12 @@ export class DynamicCredentialForm implements OnChanges {
 
       subs.push(
         control.valueChanges.subscribe(() => {
-          if (this.fields.some((item) => item.dependsOn === field.name)) {
+          if (
+            this.fields.some(
+              (item) =>
+                item.dependsOn === field.name || item.visibleWhenAll?.includes(field.name),
+            )
+          ) {
             this.resetDependentFields(field.name);
           }
           this.applyAllCascadeRules();
@@ -308,7 +313,14 @@ export class DynamicCredentialForm implements OnChanges {
   }
 
   private resetDependentFields(parentName: string): void {
-    for (const fieldName of this.getDependentFieldNames(parentName)) {
+    const dependentNames = new Set([
+      ...this.getDependentFieldNames(parentName),
+      ...this.fields
+        .filter((item) => item.visibleWhenAll?.includes(parentName))
+        .map((item) => item.name),
+    ]);
+
+    for (const fieldName of dependentNames) {
       const field = this.fields.find((item) => item.name === fieldName);
       const control = this.group.get(fieldName);
       if (!field || !control) continue;
@@ -341,7 +353,6 @@ export class DynamicCredentialForm implements OnChanges {
     for (const field of this.fields) {
       this.applyFieldCascadeRules(field);
     }
-    this.applyCadeteAspirantDefaults();
     this.cdr.markForCheck();
   }
 
@@ -350,59 +361,18 @@ export class DynamicCredentialForm implements OnChanges {
     if (!control) return;
 
     if (!this.isFieldVisible(field)) {
-      const autoValue = this.getAutoValue(field);
-      if (autoValue !== undefined) {
-        control.setValue(autoValue, { emitEvent: false });
-      }
       control.clearValidators();
       control.updateValueAndValidity({ emitEvent: false });
       return;
     }
 
     control.setValidators(this.buildValidators(field));
-    this.applyAutoValueIfNeeded(field, control as FormControl);
 
     if (field.type === 'select' || field.type === 'radio') {
       this.syncSelectValue(field, control as FormControl);
     }
 
     control.updateValueAndValidity({ emitEvent: false });
-  }
-
-  private applyAutoValueIfNeeded(field: CredentialFieldSchema, control: FormControl): void {
-    const autoValue = this.getAutoValue(field);
-    if (autoValue === undefined) return;
-
-    const current = String(control.value ?? '').trim();
-    if (current) return;
-
-    const hasDependents = this.fields.some((item) => item.dependsOn === field.name);
-    control.setValue(autoValue, { emitEvent: hasDependents });
-  }
-
-  private applyCadeteAspirantDefaults(): void {
-    const gradoCtrl = this.group.get('grado');
-    if (!gradoCtrl) return;
-
-    const grado = String(gradoCtrl.value ?? '').trim().toLowerCase();
-    if (grado !== CADETE_ASPIRANT_DEFAULTS.grado) return;
-
-    const companiaCtrl = this.group.get('compania');
-    const cursoCtrl = this.group.get('curso');
-
-    if (companiaCtrl && !String(companiaCtrl.value ?? '').trim()) {
-      companiaCtrl.setValue(CADETE_ASPIRANT_DEFAULTS.compania, { emitEvent: false });
-    }
-
-    if (cursoCtrl && !String(cursoCtrl.value ?? '').trim()) {
-      cursoCtrl.setValue(CADETE_ASPIRANT_DEFAULTS.curso, { emitEvent: false });
-    }
-
-    for (const field of this.fields) {
-      if (field.name === 'compania' || field.name === 'curso') {
-        this.applyFieldCascadeRules(field);
-      }
-    }
   }
 
   private syncSelectValue(field: CredentialFieldSchema, control: FormControl): void {
@@ -434,31 +404,7 @@ export class DynamicCredentialForm implements OnChanges {
 
   private getParentValue(field: CredentialFieldSchema): string {
     if (!field.dependsOn) return '';
-
-    const direct = String(this.group.get(field.dependsOn)?.value ?? '').trim();
-    if (direct) return direct;
-
-    const aliases = PARENT_FIELD_ALIASES[field.dependsOn] ?? [];
-    for (const alias of aliases) {
-      const value = String(this.group.get(alias)?.value ?? '').trim();
-      if (value) return value;
-    }
-
-    return '';
-  }
-
-  private getAutoValue(field: CredentialFieldSchema): string | undefined {
-    if (!field.autoValueWhen) return undefined;
-    const refValue = String(this.group.get(field.autoValueWhen.field)?.value ?? '').trim();
-    if (!refValue) return undefined;
-
-    const values = field.autoValueWhen.values;
-    if (values[refValue] !== undefined) return values[refValue];
-
-    const matchedKey = Object.keys(values).find(
-      (key) => key.toLowerCase() === refValue.toLowerCase(),
-    );
-    return matchedKey ? values[matchedKey] : undefined;
+    return String(this.group.get(field.dependsOn)?.value ?? '').trim();
   }
 
   private resolveOptionsByParent(

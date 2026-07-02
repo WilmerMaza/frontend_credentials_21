@@ -13,8 +13,8 @@ export class LoginService {
 
   /**
    * Flujo completo de inicio de sesión:
-   * 1. POST /login  → backend setea cookies httpOnly
-   * 2. GET  /login/me → hidrata el AuthService con el usuario
+   * 1. POST /auth/login  → backend setea cookies httpOnly + CSRF
+   * 2. GET  /auth/me     → hidrata el AuthService con el usuario
    *
    * El componente solo se suscribe y navega.
    */

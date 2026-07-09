@@ -96,7 +96,7 @@ export class CredentialPdfService {
     compRef.setInput('data', pdfData);
     compRef.setInput('photoUrl', pdfData.photoUrl ?? '');
     compRef.setInput('qrUrl', pdfData.qrUrl ?? '');
-    compRef.setInput('showPhotoPlaceholder', !pdfData.persona.fotoUrl);
+    compRef.setInput('showPhotoPlaceholder', false);
     compRef.changeDetectorRef.detectChanges();
 
     await this.waitForLayout();

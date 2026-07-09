@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { getPhotoUrl } from '../../../../shared/utils/url.utils';
+import { onCredentialPhotoError, resolveCredentialPhotoUrl } from '../../../../shared/utils/url.utils';
 import {
   getCredentialStatusBadgeClass,
   getCredentialStatusLabel,
@@ -106,11 +106,11 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <td>
                   <div class="pr-cell-photo">
                     <div class="pr-photo">
-                      @if (row.photoUrl) {
-                        <img [src]="getPhotoUrl(row.photoUrl)" [alt]="row.nombreCompleto" />
-                      } @else {
-                        <mat-icon>person</mat-icon>
-                      }
+                      <img
+                        [src]="resolveCredentialPhotoUrl(row.photoUrl)"
+                        [alt]="row.nombreCompleto"
+                        (error)="onPhotoError($event)"
+                      />
                     </div>
                     <!-- <div class="pr-name">{{ row.nombreCompleto }}</div> -->
                   </div>
@@ -159,15 +159,6 @@ import type { PersonalItem } from '../../models/personal-item.model';
                       type="button"
                     >
                       <mat-icon>edit</mat-icon>
-                    </button>
-                    <button
-                      class="pr-icon-btn"
-                      title="Eliminar"
-                      matTooltip="Eliminar registro"
-                      (click)="delete.emit(row)"
-                      type="button"
-                    >
-                      <mat-icon>delete</mat-icon>
                     </button>
                   </div>
                 </td>
@@ -252,11 +243,11 @@ export class PersonalTableDesktopComponent {
 
   view = output<PersonalItem>();
   edit = output<PersonalItem>();
-  delete = output<PersonalItem>();
   pageChange = output<number>();
   pageSizeChange = output<number>();
 
-  readonly getPhotoUrl = getPhotoUrl;
+  readonly resolveCredentialPhotoUrl = resolveCredentialPhotoUrl;
+  readonly onPhotoError = onCredentialPhotoError;
   readonly getCredentialStatusLabel = getCredentialStatusLabel;
   readonly getCredentialStatusBadgeClass = getCredentialStatusBadgeClass;
 

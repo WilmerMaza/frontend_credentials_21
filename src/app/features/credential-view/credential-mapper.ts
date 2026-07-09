@@ -5,13 +5,12 @@ import {
   normalizeTypeCode,
   type PersonalItem,
 } from '../personal-registrado/models/personal-item.model';
-import { getPhotoUrl } from '../../shared/utils/url.utils';
+import { getPublicAppUrl, resolveCredentialPhotoUrl } from '../../shared/utils/url.utils';
 import { resolveEffectiveCredentialStatus } from '../../shared/utils/credential-expiration.utils';
 import type { CredentialData } from './credential-data.types';
 import type { CredentialPdfData } from './credential-view-pdf.component';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
-const DEFAULT_PHOTO = 'https://i.imgur.com/8Km9tLL.png';
 
 type CredentialVariant = CredentialData['tipoRegistro']['variante'];
 
@@ -28,7 +27,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
   const tipoCodigo = normalizeTypeCode(String(item.tipoRegistroCodigo ?? 'militar'));
   const tipoNombre = item.tipoRegistroNombre || getCredentialTypeLabel(tipoCodigo);
   const variante = getCredentialVariant(tipoCodigo);
-  const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}` : '';
+  const baseUrl = getPublicAppUrl();
 
   return {
     org: {
@@ -79,9 +78,7 @@ export function buildCredentialPdfData(
   resolvedPhotoUrl?: string,
 ): CredentialPdfData {
   const credential = mapPersonalItemToCredentialData(item);
-  const photo =
-    resolvedPhotoUrl ??
-    (item.photoUrl ? getPhotoUrl(item.photoUrl) : DEFAULT_PHOTO);
+  const photo = resolvedPhotoUrl ?? resolveCredentialPhotoUrl(item.photoUrl);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(credential.verificacion.qrData)}`;
 
   return {
@@ -156,8 +153,6 @@ function buildPrimaryFields(variant: CredentialVariant, item: PersonalItem) {
     field('RANGO', item.rango),
     field('FUERZA', getCredentialDetailValue(details, 'force', 'fuerza')),
     field('UNIDAD', item.unidad),
-    field('FECHA DE INGRESO', item.fechaIngreso),
-    field('AÑOS DE SERVICIO', String(calcAniosServicio(item.fechaIngreso))),
   ]);
 }
 
@@ -193,25 +188,4 @@ function formatCourse(value?: string): string | undefined {
   if (!value) return undefined;
   if (/^\d+$/.test(value)) return `${value} año`;
   return value;
-}
-
-function calcAniosServicio(fechaIngreso: string): number {
-  try {
-    const parts = fechaIngreso.split(/[/-]/).map(Number);
-    if (parts.length < 3) return 0;
-    let d: number, m: number, y: number;
-    if (parts[0]! > 31) {
-      [y, m, d] = [parts[0]!, parts[1]! || 1, parts[2]! || 1];
-    } else {
-      [d, m, y] = [parts[0]! || 1, parts[1]! || 1, parts[2]!];
-    }
-    const ingreso = new Date(y, m - 1, d);
-    const hoy = new Date();
-    return Math.max(
-      0,
-      Math.floor((hoy.getTime() - ingreso.getTime()) / (365.25 * 24 * 60 * 60 * 1000)),
-    );
-  } catch {
-    return 0;
-  }
 }

@@ -6,6 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
+ARG BUILD_REV=dev
+LABEL build.rev=$BUILD_REV
+RUN echo "front-credentials build @ ${BUILD_REV}"
+
 COPY . .
 
 RUN npm run build

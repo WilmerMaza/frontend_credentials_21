@@ -1,6 +1,8 @@
 export const environment = {
   production: false,
   enap_api: '/api',
+  /** Vacío = usa window.location.origin (útil en ng serve local). */
+  publicAppUrl: '',
   /** Debe coincidir con API_KEY del backend (.env). Vacío = sin header (guard desactivado). */
   apiKey: '',
   GetHexaKey:

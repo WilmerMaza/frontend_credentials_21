@@ -15,6 +15,13 @@ import {
   mapCredentialToPersonalItem,
 } from '../models/personal-item.model';
 
+export interface CredentialListFilters {
+  status?: string | null;
+  name?: string | null;
+  email?: string | null;
+  identity?: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PersonalListService {
   private readonly _list = signal<PersonalItem[]>([]);
@@ -52,13 +59,13 @@ export class PersonalListService {
 
   /**
    * GET /credentials
-   * Query params: page, limit, status (ACTIVE | PENDING | EXPIRED | TRANSFERRED).
+   * Query params: page, limit, status, name, email, identity.
    * El backend filtra en BD, devuelve total/totalPages filtrados y summary.expiradas.
    */
   loadAll(
     page?: number,
     limit?: number,
-    status?: string | null,
+    filters?: CredentialListFilters | null,
   ): Observable<CredentialApiResponse[]> {
     const hasExistingData = this._list().length > 0;
 
@@ -78,15 +85,24 @@ export class PersonalListService {
     if (limit !== undefined) {
       params = params.set('limit', limit);
     }
-    if (status) {
-      params = params.set('status', status);
+    if (filters?.status) {
+      params = params.set('status', filters.status);
+    }
+    if (filters?.name) {
+      params = params.set('name', filters.name);
+    }
+    if (filters?.email) {
+      params = params.set('email', filters.email);
+    }
+    if (filters?.identity) {
+      params = params.set('identity', filters.identity);
     }
 
     return this.enap.get<PaginatedCredentialsResponse>('/credentials', params, context).pipe(
       tap({
         next: (response) => {
           this.assertCredentialsResponse(response);
-          this.applyCredentialsResponse(response, status);
+          this.applyCredentialsResponse(response, filters);
           this._loading.set(false);
           this._syncing.set(false);
         },
@@ -209,12 +225,15 @@ export class PersonalListService {
 
   private applyCredentialsResponse(
     response: PaginatedCredentialsResponse,
-    statusFilter?: string | null,
+    filters?: CredentialListFilters | null,
   ): void {
     const items = response.data.map(mapCredentialToPersonalItem);
     this._list.set(items);
     this._totalRecords.set(response.total);
-    if (!statusFilter) {
+    const hasFilters = Boolean(
+      filters?.status || filters?.name || filters?.email || filters?.identity,
+    );
+    if (!hasFilters) {
       this._globalTotalRecords.set(response.total);
     }
     this._currentPage.set(response.page);

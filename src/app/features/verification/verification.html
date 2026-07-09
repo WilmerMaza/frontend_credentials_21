@@ -66,11 +66,11 @@
 
           <div class="verify-card__body">
             <aside class="verify-card__photo">
-              @if (photoUrl()) {
-                <img [src]="photoUrl()" [alt]="c.persona.nombreCompleto" />
-              } @else {
-                <div class="verify-card__photo-placeholder">FOTO</div>
-              }
+              <img
+                [src]="photoUrl()"
+                [alt]="c.persona.nombreCompleto"
+                (error)="onPhotoError($event)"
+              />
               <span
                 class="verify-card__pill"
                 [class.verify-card__pill--active]="getCredentialStatusBadgeClass(c.estado) === 'ok'"

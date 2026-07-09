@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { getPhotoUrl } from '../../../../shared/utils/url.utils';
+import { onCredentialPhotoError, resolveCredentialPhotoUrl } from '../../../../shared/utils/url.utils';
 import {
   getCredentialStatusBadgeClass,
   getCredentialStatusLabel,
@@ -84,11 +84,11 @@ import type { PersonalItem } from '../../models/personal-item.model';
             <div class="row-top">
               <div class="row-left">
                 <div class="photo">
-                  @if (row.photoUrl) {
-                    <img [src]="getPhotoUrl(row.photoUrl)" [alt]="row.nombreCompleto" />
-                  } @else {
-                    <mat-icon>person</mat-icon>
-                  }
+                  <img
+                    [src]="resolveCredentialPhotoUrl(row.photoUrl)"
+                    [alt]="row.nombreCompleto"
+                    (error)="onPhotoError($event)"
+                  />
                 </div>
                 <div>
                   <div class="name">{{ row.nombreCompleto }}</div>
@@ -127,9 +127,6 @@ import type { PersonalItem } from '../../models/personal-item.model';
               </button>
               <button class="a-btn" title="Editar" matTooltip="Editar registro" (click)="edit.emit(row)" type="button">
                 <mat-icon>edit</mat-icon>
-              </button>
-              <button class="a-btn danger" title="Eliminar" matTooltip="Eliminar registro" (click)="delete.emit(row)" type="button">
-                <mat-icon>delete</mat-icon>
               </button>
             </div>
           </article>
@@ -183,11 +180,11 @@ export class PersonalListMobileComponent {
 
   view = output<PersonalItem>();
   edit = output<PersonalItem>();
-  delete = output<PersonalItem>();
   pageChange = output<number>();
   pageSizeChange = output<number>();
 
-  readonly getPhotoUrl = getPhotoUrl;
+  readonly resolveCredentialPhotoUrl = resolveCredentialPhotoUrl;
+  readonly onPhotoError = onCredentialPhotoError;
   readonly getCredentialStatusLabel = getCredentialStatusLabel;
   readonly getCredentialStatusBadgeClass = getCredentialStatusBadgeClass;
 

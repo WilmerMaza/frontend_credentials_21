@@ -1,3 +1,6 @@
+# Proxy para desarrollo local (ng serve)
+# En producción/Docker el front usa enap_api: '/api' y nginx hace el proxy.
+
 {
   "/api": {
     "target": "http://localhost:3000",

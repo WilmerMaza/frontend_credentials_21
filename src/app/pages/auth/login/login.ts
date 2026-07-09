@@ -68,14 +68,6 @@ export class Login {
     });
   }
 
-  onForgot(): void {
-    this.router.navigate(['/forgot-password']);
-  }
-
-  onRegister(): void {
-    this.router.navigate(['/auth/register']);
-  }
-
   private resolveError(err: any): string {
     const status = err?.status;
     if (status === 401) return 'Credenciales incorrectas. Verifica tu usuario y contraseña.';

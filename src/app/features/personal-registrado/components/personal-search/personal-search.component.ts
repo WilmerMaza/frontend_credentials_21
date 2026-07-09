@@ -15,129 +15,87 @@ export interface StatusFilterOption {
   imports: [CommonModule, ReactiveFormsModule, MatIconModule],
   styleUrls: ['./personal-search.component.scss'],
   template: `
-    @if (isMobile()) {
-      <section class="card">
-        <div class="accordion">
-          <button type="button" class="accordion-head" (click)="toggleFilters()">
-            <div class="accordion-left">
-              <span class="filter-dot">
-                <mat-icon>filter_list</mat-icon>
-              </span>
-              <span class="accordion-title">Filtros de búsqueda</span>
-            </div>
-            <span class="chev" [class.chev--open]="filtersExpanded()">
-              <mat-icon>expand_more</mat-icon>
-            </span>
-          </button>
-          @if (filtersExpanded()) {
-            <div class="accordion-body">
-              <div class="field">
-                <mat-icon>search</mat-icon>
-                <input
-                  type="text"
-                  [formControl]="$any(searchForm().get('nombre'))"
-                  placeholder="Buscar nombre o apellido"
-                />
-              </div>
-              <div class="field">
-                <mat-icon>mail</mat-icon>
-                <input
-                  type="text"
-                  [formControl]="$any(searchForm().get('correo'))"
-                  placeholder="Correo institucional"
-                />
-              </div>
-              <div class="field">
-                <mat-icon>badge</mat-icon>
-                <input
-                  type="text"
-                  [formControl]="$any(searchForm().get('identificacion'))"
-                  placeholder="Número de identificación"
-                />
-              </div>
-              <div class="field field--select">
-                <mat-icon>flag</mat-icon>
-                <select [formControl]="$any(searchForm().get('estado'))">
-                  <option value="">Todos los estados</option>
-                  @for (option of statusOptions(); track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
-              </div>
-              <div class="btn-row">
-                <button type="button" class="btn primary" (click)="search.emit()">
-                  <mat-icon>filter_list</mat-icon>
-                  Buscar
-                </button>
-                <button type="button" class="btn ghost" (click)="clearSearch.emit()">Limpiar</button>
-              </div>
-            </div>
-          }
-        </div>
-        <button class="cta" (click)="register.emit()">
-          <span class="cta-ico">+</span>
-          Registrar nuevo personal
-        </button>
-      </section>
-    } @else {
-      <div class="pr-filters-accordion">
+    <section class="filters" [class.filters--mobile]="isMobile()">
+      <div class="filters-accordion">
         <button
           type="button"
-          class="pr-filters-trigger"
+          class="filters-trigger"
           (click)="toggleFilters()"
           [attr.aria-expanded]="filtersExpanded()"
-          aria-controls="pr-filters-content"
+          aria-controls="personal-filters-panel"
         >
-          <mat-icon>filter_list</mat-icon>
-          <span>Filtros de búsqueda</span>
-          <mat-icon class="pr-filters-chevron">{{ filtersExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <span class="filters-trigger__left">
+            <span class="filters-trigger__icon" aria-hidden="true">
+              <mat-icon>filter_list</mat-icon>
+            </span>
+            <span class="filters-trigger__title">Filtros de búsqueda</span>
+          </span>
+          <span class="filters-trigger__chev" [class.filters-trigger__chev--open]="filtersExpanded()">
+            <mat-icon>expand_more</mat-icon>
+          </span>
         </button>
+
         <div
-          id="pr-filters-content"
-          class="pr-filters"
-          [class.pr-filters--expanded]="filtersExpanded()"
+          id="personal-filters-panel"
+          class="filters-panel"
+          [class.filters-panel--expanded]="filtersExpanded() || !isCollapsible()"
         >
-          <div class="pr-field">
-            <mat-icon>search</mat-icon>
-            <input
-              type="text"
-              [formControl]="$any(searchForm().get('nombre'))"
-              placeholder="Buscar nombre o apellido"
-            />
+          <div class="filters-grid">
+            <label class="filter-field">
+              <mat-icon aria-hidden="true">search</mat-icon>
+              <input
+                type="text"
+                [formControl]="$any(searchForm().get('nombre'))"
+                placeholder="Buscar nombre o apellido"
+              />
+            </label>
+
+            <label class="filter-field">
+              <mat-icon aria-hidden="true">mail</mat-icon>
+              <input
+                type="text"
+                [formControl]="$any(searchForm().get('correo'))"
+                placeholder="Correo institucional"
+              />
+            </label>
+
+            <label class="filter-field">
+              <mat-icon aria-hidden="true">badge</mat-icon>
+              <input
+                type="text"
+                [formControl]="$any(searchForm().get('identificacion'))"
+                placeholder="Número de identificación"
+              />
+            </label>
+
+            <label class="filter-field filter-field--select">
+              <mat-icon aria-hidden="true">flag</mat-icon>
+              <select [formControl]="$any(searchForm().get('estado'))">
+                <option value="">Todos los estados</option>
+                @for (option of statusOptions(); track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+
+            <div class="filter-actions">
+              <button type="button" class="filter-btn filter-btn--primary" (click)="search.emit()">
+                <mat-icon>filter_list</mat-icon>
+                Buscar
+              </button>
+              <button type="button" class="filter-btn" (click)="clearSearch.emit()">Limpiar</button>
+            </div>
           </div>
-          <div class="pr-field">
-            <mat-icon>mail</mat-icon>
-            <input
-              type="text"
-              [formControl]="$any(searchForm().get('correo'))"
-              placeholder="Correo institucional"
-            />
-          </div>
-          <div class="pr-field">
-            <mat-icon>badge</mat-icon>
-            <input
-              type="text"
-              [formControl]="$any(searchForm().get('identificacion'))"
-              placeholder="Número de identificación"
-            />
-          </div>
-          <div class="pr-field pr-field--select">
-            <mat-icon>flag</mat-icon>
-            <select [formControl]="$any(searchForm().get('estado'))">
-              <option value="">Todos los estados</option>
-              @for (option of statusOptions(); track option.value) {
-                <option [value]="option.value">{{ option.label }}</option>
-              }
-            </select>
-          </div>
-          <button type="button" class="pr-btn primary" (click)="search.emit()">
-            <mat-icon>filter_list</mat-icon>
-            Buscar
-          </button>
-          <button type="button" class="pr-btn" (click)="clearSearch.emit()">Limpiar</button>
         </div>
       </div>
-    }
+
+      @if (isMobile()) {
+        <button type="button" class="filters-cta" (click)="register.emit()">
+          <span class="filters-cta__icon" aria-hidden="true">+</span>
+          Registrar nuevo personal
+        </button>
+      }
+    </section>
   `,
 })
 export class PersonalSearchComponent {
@@ -150,7 +108,12 @@ export class PersonalSearchComponent {
   clearSearch = output<void>();
   register = output<void>();
 
+  isCollapsible(): boolean {
+    return this.isMobile();
+  }
+
   toggleFilters(): void {
+    if (!this.isCollapsible()) return;
     this.filtersExpanded.update((v) => !v);
   }
 }

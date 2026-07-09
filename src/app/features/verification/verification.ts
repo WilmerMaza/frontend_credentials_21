@@ -10,7 +10,7 @@ import {
   getCredentialStatusBadgeClass,
   getCredentialStatusLabel,
 } from '../../shared/utils/credential-status.utils';
-import { getPublicVerifyPhotoUrl } from '../../shared/utils/url.utils';
+import { resolvePublicVerifyPhotoUrl, onCredentialPhotoError } from '../../shared/utils/url.utils';
 import {
   mapVerificationResponse,
   type VerificationViewModel,
@@ -43,10 +43,11 @@ export class Verification {
   readonly isValid = computed(() => this.viewModel()?.valid ?? false);
   readonly checkedAt = computed(() => this.viewModel()?.checkedAt ?? null);
 
-  readonly photoUrl = computed(() => {
-    const filename = this.viewModel()?.photoFilename;
-    return filename ? getPublicVerifyPhotoUrl(filename) : '';
-  });
+  readonly photoUrl = computed(() =>
+    resolvePublicVerifyPhotoUrl(this.viewModel()?.photoFilename),
+  );
+
+  readonly onPhotoError = onCredentialPhotoError;
 
   readonly statusIcon = computed(() => {
     const current = this.outcome();

@@ -21,7 +21,7 @@ import {
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
 import type { PersonalItem } from '../personal-registrado/models/personal-item.model';
 import type { CredentialData } from './credential-data.types';
-import { getPhotoUrl } from '../../shared/utils/url.utils';
+import { onCredentialPhotoError, resolveCredentialPhotoUrl } from '../../shared/utils/url.utils';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import {
   deriveValidoHasta,
@@ -36,7 +36,6 @@ import {
 } from '../../shared/utils/credential-status.utils';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
-const DEFAULT_PHOTO = 'https://i.imgur.com/8Km9tLL.png';
 
 @Component({
   selector: 'app-credential-view',
@@ -93,8 +92,10 @@ export class CredentialView implements OnInit, OnDestroy {
 
   readonly photoUrl = computed(() => {
     const c = this.credential();
-    return c?.persona?.fotoUrl ? getPhotoUrl(c.persona.fotoUrl) : DEFAULT_PHOTO;
+    return resolveCredentialPhotoUrl(c?.persona?.fotoUrl);
   });
+
+  readonly onPhotoError = onCredentialPhotoError;
 
   readonly pdfData = computed((): CredentialPdfData | null => {
     const c = this.credential();

@@ -178,18 +178,6 @@
   font-size: 16px;
 }
 
-.forgot {
-  cursor: pointer;
-  color: #1d2b3a;
-  text-decoration: none;
-  width: fit-content;
-  margin: 2px 0 8px;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
 .login-btn {
   height: 52px;
   border-radius: 10px;
@@ -199,20 +187,6 @@
 
 .login-btn.mat-mdc-button-base:not(:disabled) {
   background: #163665 !important;
-}
-
-.register {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 6px;
-  color: #1d2b3a;
-
-  a {
-    cursor: pointer;
-    font-weight: 700;
-    text-decoration: underline;
-  }
 }
 
 /* Evita “40vh” en móvil (te crea un scroll raro) */

@@ -1,5 +1,8 @@
 import type { CredentialApiResponse } from '../../features/personal-registrado/models/personal-item.model';
-import { resolveCredentialDisplayName } from '../../features/personal-registrado/models/personal-item.model';
+import {
+  resolveCredentialDisplayName,
+  toCanonicalTypeCode,
+} from '../../features/personal-registrado/models/personal-item.model';
 import {
   parseCredentialDate,
   resolveEffectiveCredentialStatus,
@@ -114,7 +117,9 @@ export function mapCredentialToEditForm(credential: CredentialApiResponse): {
   return {
     context: {
       id: credential.id,
-      credentialTypeCode: String(credential.credentialTypeCode ?? 'militar'),
+      credentialTypeCode: toCanonicalTypeCode(
+        String(credential.credentialTypeCode ?? 'militar'),
+      ),
       credentialTypeName: resolveCredentialDisplayName(
         String(credential.credentialTypeCode ?? 'militar'),
         credential.credentialTypeName,
@@ -147,7 +152,7 @@ export function mapCredentialToRegistrationForm(
   const phone = String(metadata['phone'] ?? credential.phone ?? '').trim();
 
   return {
-    type: String(credential.credentialTypeCode ?? 'militar'),
+    type: toCanonicalTypeCode(String(credential.credentialTypeCode ?? 'militar')),
     common: {
       firstName: String(credential.firstName ?? '').trim(),
       lastName: String(credential.lastName ?? '').trim(),

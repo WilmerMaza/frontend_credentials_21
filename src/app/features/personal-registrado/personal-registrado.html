@@ -1,15 +1,32 @@
 @if (isMobile()) {
-  <!-- Vista móvil -->
   <div class="m-page">
     <main class="m-content">
       <app-breadcrumb></app-breadcrumb>
-      <h1 class="m-title">Personal registrado</h1>
-      <p class="m-subtitle">Gestione y consulte el personal militar registrado en el sistema.</p>
 
-      <!-- Métricas (scroll horizontal) -->
-      <app-personal-metrics [statCards]="statCards()" [isMobile]="true"></app-personal-metrics>
+      <header class="m-header">
+        <div>
+          <h1 class="m-title">Personal registrado</h1>
+          <p class="m-subtitle">Gestione y consulte el personal militar registrado en el sistema.</p>
+        </div>
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          class="m-header__btn"
+          (click)="navigateToRegistration()"
+        >
+          <mat-icon>add</mat-icon>
+          Registrar
+        </button>
+      </header>
 
-      <!-- Filtros + CTA -->
+      <app-personal-metrics
+        [statCards]="statCards()"
+        [isMobile]="true"
+        [filtersActive]="hasActiveFilters()"
+        [(filtersExpanded)]="filtersExpanded"
+      ></app-personal-metrics>
+
       <app-personal-search
         [isMobile]="true"
         [searchForm]="searchForm"
@@ -17,14 +34,12 @@
         [(filtersExpanded)]="filtersExpanded"
         (search)="onSearch()"
         (clearSearch)="onClearSearch()"
-        (register)="navigateToRegistration()"
       ></app-personal-search>
 
       @if (apiError()) {
         <div class="pr-api-error">{{ apiError() }}</div>
       }
 
-      <!-- Lista móvil con registros y paginación -->
       <app-personal-list-mobile
         [loading]="loading()"
         [syncing]="syncing()"
@@ -47,30 +62,36 @@
     </main>
   </div>
 } @else {
-  <!-- Vista desktop -->
   <div class="pr-container">
     <app-breadcrumb></app-breadcrumb>
 
-    <!-- Page Head -->
-    <div class="pr-header">
-      <div>
+    <header class="pr-header">
+      <div class="pr-header__copy">
         <h1 class="pr-header__title">Personal registrado</h1>
         <p class="pr-header__subtitle">
           Gestione y consulte el personal militar registrado en el sistema.
         </p>
       </div>
-      <button class="pr-header__btn" (click)="navigateToRegistration()">
+      <button
+        mat-flat-button
+        color="primary"
+        class="pr-header__btn"
+        type="button"
+        (click)="navigateToRegistration()"
+      >
         <mat-icon>add</mat-icon>
         Registrar nuevo personal
       </button>
-    </div>
+    </header>
 
-    <!-- Metrics -->
-    <app-personal-metrics [statCards]="statCards()" [isMobile]="false"></app-personal-metrics>
+    <app-personal-metrics
+      [statCards]="statCards()"
+      [isMobile]="false"
+      [filtersActive]="hasActiveFilters()"
+      [(filtersExpanded)]="filtersExpanded"
+    ></app-personal-metrics>
 
-    <!-- Table Card -->
-    <div class="pr-table-card">
-      <!-- Filtros Desktop -->
+    <section class="pr-content">
       <app-personal-search
         [isMobile]="false"
         [searchForm]="searchForm"
@@ -84,7 +105,6 @@
         <div class="pr-api-error">{{ apiError() }}</div>
       }
 
-      <!-- Tabla Desktop con registros y paginación -->
       <app-personal-table-desktop
         [loading]="loading()"
         [syncing]="syncing()"
@@ -102,6 +122,6 @@
         (pageChange)="goToPage($event)"
         (pageSizeChange)="onPageSizeChange($event)"
       ></app-personal-table-desktop>
-    </div>
+    </section>
   </div>
 }

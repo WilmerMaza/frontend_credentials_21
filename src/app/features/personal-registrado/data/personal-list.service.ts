@@ -13,6 +13,7 @@ import {
   getCredentialTypeLabel,
   deriveValidoHasta,
   mapCredentialToPersonalItem,
+  toCanonicalTypeCode,
 } from '../models/personal-item.model';
 
 export interface CredentialListFilters {
@@ -185,7 +186,7 @@ export class PersonalListService {
     const year = new Date().getFullYear();
     const id = `new-${Date.now()}`;
     const identificacion = idNumber || `MIL-${year}-${String(Date.now()).slice(-6)}`;
-    const tipoRegistroCodigo = String(payload.type ?? 'militar');
+    const tipoRegistroCodigo = toCanonicalTypeCode(String(payload.type ?? 'militar'));
     const tipoRegistroNombre = getCredentialTypeLabel(tipoRegistroCodigo);
     const rango =
       (details['grades'] as string) ||

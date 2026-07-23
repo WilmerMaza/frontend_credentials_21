@@ -42,12 +42,9 @@ import {
   type RegistrationFormValues,
 } from '../../shared/utils/credential-form.mapper';
 import { ValidationService } from '../../core/services/validation.service';
-import { CredentialPdfService } from '../../core/services/credential-pdf.service';
-import { MailService } from '../../core/services/mail.service';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
-import { buildCredentialPdfData } from '../credential-view/credential-mapper';
 import type { PersonalItemWithExtras } from '../credential-view/credential-mapper';
 import { getPhotoUrl } from '../../shared/utils/url.utils';
 import { getHttpErrorMessage } from '../../shared/utils/http-error.utils';
@@ -78,7 +75,7 @@ import { DynamicCredentialForm } from './components/forms/dynamic-credential-for
 import { DateInputMaskDirective } from '../../shared/directives/date-input-mask.directive';
 import { IdentityInputMaskDirective } from '../../shared/directives/identity-input-mask.directive';
 import { PhoneInputMaskDirective } from '../../shared/directives/phone-input-mask.directive';
-import { getCredentialTypeLabel } from '../personal-registrado/models/personal-item.model';
+import { getCredentialTypeLabel, toCanonicalTypeCode } from '../personal-registrado/models/personal-item.model';
 
 type RegistrationType = string;
 type IdType = 'cc' | 'ti' | 'ce' | 'pasaporte';
@@ -118,8 +115,6 @@ export class Registration implements OnDestroy {
   private readonly registrationService = inject(RegistrationService);
   private readonly personalListService = inject(PersonalListService);
   private readonly validationService = inject(ValidationService);
-  private readonly credentialPdfService = inject(CredentialPdfService);
-  private readonly mailService = inject(MailService);
   private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly credentialTypeService = inject(CredentialTypeService);
   private readonly destroyRef = inject(DestroyRef);
@@ -315,14 +310,12 @@ export class Registration implements OnDestroy {
 
   getSubmitButtonLabel(): string {
     if (this.submitting()) return 'Procesando...';
-    if (this.canSubmitForm()) return 'Finalizar Registro';
-    return 'Complete el formulario';
+    return 'Guardar registro';
   }
 
   getSubmitButtonIcon(): string {
     if (this.submitting()) return 'hourglass_empty';
-    if (this.canSubmitForm()) return 'check_circle';
-    return 'pending_actions';
+    return 'save';
   }
 
   isEmailVerified(): boolean {
@@ -473,8 +466,8 @@ export class Registration implements OnDestroy {
       this.credentialTypes.set(types);
       this.types.set(
         types.map((type) => ({
-          value: type.code,
-          label: type.name || getCredentialTypeLabel(type.code),
+          label: getCredentialTypeLabel(type.code),
+          value: toCanonicalTypeCode(type.code),
         })),
       );
 
@@ -1189,19 +1182,12 @@ export class Registration implements OnDestroy {
 
     if (!this.hasPhotoSelected()) {
       this.photoRequired.set(true);
-      this.identitySectionExpanded.set(true);
     }
 
     const missing = this.collectMissingFields();
     if (missing.length > 0) {
       this.expandSectionsForMissing(missing);
-      const listHtml = missing.map((f) => `<li>${f}</li>`).join('');
-      void Swal.fire({
-        icon: 'error',
-        title: 'Formulario incompleto',
-        html: `<p style="margin:0 0 8px">Complete los siguientes campos:</p><ul style="text-align:left;margin:0;padding-left:1.25rem">${listHtml}</ul>`,
-        confirmButtonColor: '#163665',
-      });
+      this.scrollToFirstInvalidField();
       return;
     }
 
@@ -1346,6 +1332,28 @@ export class Registration implements OnDestroy {
     }
   }
 
+  private scrollToFirstInvalidField(): void {
+    if (typeof document === 'undefined') return;
+
+    // Esperar a que Material pinte .mat-form-field-invalid tras markAllAsTouched
+    requestAnimationFrame(() => {
+      const root = document.querySelector('app-registration');
+      if (!root) return;
+
+      const target =
+        (root.querySelector('.reg-attach--error') as HTMLElement | null) ??
+        (root.querySelector('.mat-mdc-form-field.mat-form-field-invalid') as HTMLElement | null) ??
+        (root.querySelector('.reg-field-error') as HTMLElement | null);
+
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      const focusable = target?.querySelector<HTMLElement>(
+        'input, textarea, select, .mat-mdc-select-trigger, [tabindex="0"]',
+      );
+      focusable?.focus({ preventScroll: true });
+    });
+  }
+
   private focusInstitutionalEmail(): void {
     this.focusField('input[formcontrolname="institutionalEmail"]');
   }
@@ -1385,53 +1393,12 @@ export class Registration implements OnDestroy {
     await firstValueFrom(this.personalListService.loadAll());
     await this.router.navigate(['/personal-registrado']);
 
-    void Swal.fire({
-      title: 'Enviando credencial...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-
-    let emailSent = false;
-    let mailErrorMessage: string | undefined;
-    try {
-      const pdfData = buildCredentialPdfData(
-        newItem,
-        newItem.photoUrl ? getPhotoUrl(newItem.photoUrl) : undefined,
-      );
-      const blob = await this.credentialPdfService.generateBlobFromData(
-        pdfData,
-        this.environmentInjector,
-      );
-      const nombre = newItem.nombreCompleto;
-      await firstValueFrom(
-        this.mailService.sendCredentialEmail(institutionalEmail, blob, {
-          subject: nombre ? `Tu credencial - ${nombre}` : 'Tu credencial',
-        }),
-      );
-      emailSent = true;
-    } catch (err) {
-      console.error('Error al enviar credencial por correo:', err);
-      mailErrorMessage = getHttpErrorMessage(err, 'mail');
-    }
-
-    Swal.close();
-
-    if (emailSent) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Registro exitoso',
-        text: `Credencial creada y enviada a ${institutionalEmail}.`,
-        confirmButtonColor: '#163665',
-      });
-      return;
-    }
-
     await Swal.fire({
-      icon: 'warning',
+      icon: 'success',
       title: 'Registro exitoso',
-      text:
-        mailErrorMessage ??
-        'La credencial se creó correctamente, pero no se pudo enviar el correo. Puede compartirla desde la vista de credencial.',
+      text: institutionalEmail
+        ? `Credencial creada. El PDF y el correo se enviarán en segundo plano a ${institutionalEmail}.`
+        : 'Credencial creada. El PDF y el correo se enviarán en segundo plano.',
       confirmButtonColor: '#163665',
     });
   }

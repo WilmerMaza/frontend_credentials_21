@@ -4,7 +4,20 @@ import {
 } from '../../../shared/utils/credential-expiration.utils';
 import type { CredentialStatusCode } from '../../../shared/utils/credential-status.utils';
 
-export type CredentialTypeCode = 'militar' | 'civil' | 'cadetes' | 'inter-escuelas' | string;
+export type CredentialTypeCode =
+  | 'militar'
+  | 'civil'
+  | 'alumnos_baena'
+  | string;
+
+/** Catálogo canónico: code (DB) → nombre visible uniforme (siempre MAYÚSCULAS). */
+export const CREDENTIAL_TYPE_CATALOG = {
+  militar: { code: 'militar', name: 'PERSONAL MILITAR' },
+  civil: { code: 'civil', name: 'PERSONAL CIVIL' },
+  alumnos_baena: { code: 'alumnos_baena', name: 'ALUMNOS BAENA' },
+} as const;
+
+export type CanonicalCredentialTypeCode = keyof typeof CREDENTIAL_TYPE_CATALOG;
 
 export type CredentialDetails = Record<string, unknown>;
 
@@ -95,7 +108,7 @@ export function mapCredentialToPersonalItem(c: CredentialApiResponse): PersonalI
     ...normalizeDetails(c.details),
     ...metadata,
   };
-  const tipoRegistroCodigo = String(c.credentialTypeCode ?? 'militar');
+  const tipoRegistroCodigo = toCanonicalTypeCode(String(c.credentialTypeCode ?? 'militar'));
   const tipoRegistroNombre = resolveCredentialDisplayName(
     tipoRegistroCodigo,
     c.credentialTypeName,
@@ -143,21 +156,41 @@ export function mapCredentialToPersonalItem(c: CredentialApiResponse): PersonalI
 }
 
 export function getCredentialTypeLabel(typeCode: string): string {
-  const normalized = normalizeTypeCode(typeCode);
-  if (normalized === 'civil') return 'Personal Civil';
-  if (normalized === 'militar') return 'Personal Militar';
-  return typeCode;
+  const canonical = toCanonicalTypeCode(typeCode);
+  const fromCatalog = CREDENTIAL_TYPE_CATALOG[canonical as CanonicalCredentialTypeCode];
+  if (fromCatalog) return fromCatalog.name;
+  return humanizeTypeCode(canonical);
 }
 
+/**
+ * Nombre visible siempre desde el catálogo cuando el código es conocido,
+ * en MAYÚSCULAS para evitar mezcla de casing.
+ */
 export function resolveCredentialDisplayName(
   typeCode: string,
   apiName?: string | null,
 ): string {
-  return nonEmptyString(apiName) ?? getCredentialTypeLabel(typeCode);
+  const canonical = toCanonicalTypeCode(typeCode);
+  const fromCatalog = CREDENTIAL_TYPE_CATALOG[canonical as CanonicalCredentialTypeCode];
+  if (fromCatalog) return fromCatalog.name;
+  return (nonEmptyString(apiName) ?? getCredentialTypeLabel(canonical)).toUpperCase();
+}
+
+/** Código canónico para API/BD (guion bajo) y filtros. */
+export function toCanonicalTypeCode(typeCode: string): string {
+  const underscored = typeCode.trim().toLowerCase().replace(/-/g, '_');
+  return underscored;
 }
 
 export function normalizeTypeCode(typeCode: string): string {
-  return typeCode.trim().toLowerCase().replace(/_/g, '-');
+  return toCanonicalTypeCode(typeCode).replace(/_/g, '-');
+}
+
+function humanizeTypeCode(typeCode: string): string {
+  return typeCode
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toUpperCase();
 }
 
 export function getCredentialDetailValue(

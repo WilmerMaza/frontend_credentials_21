@@ -1,6 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { onCredentialPhotoError, resolveCredentialPhotoUrl } from '../../../../shared/utils/url.utils';
 import {
@@ -12,16 +13,20 @@ import type { PersonalItem } from '../../models/personal-item.model';
 @Component({
   selector: 'app-personal-table-desktop',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, MatIconModule, MatMenuModule, MatTooltipModule],
   styleUrls: ['./personal-table-desktop.component.scss'],
   template: `
-    <div class="pr-table-wrap" style="position: relative;">
-      @if (syncing()) {
-        <div class="pr-syncing-bar">
-          <div class="pr-syncing-progress"></div>
-        </div>
-      }
-      <table class="pr-table">
+    <div class="pr-table-shell">
+      <div class="pr-table-watermark" aria-hidden="true">
+        <img src="/images/ENAP.png" alt="" />
+      </div>
+      <div class="pr-table-wrap">
+        @if (syncing()) {
+          <div class="pr-syncing-bar">
+            <div class="pr-syncing-progress"></div>
+          </div>
+        }
+        <table class="pr-table">
         <colgroup>
           <col style="width: 5%" />
           <col style="width: 15%" />
@@ -86,15 +91,11 @@ import type { PersonalItem } from '../../models/personal-item.model';
                   <div class="pr-actions">
                     <div
                       class="skeleton"
-                      style="width: 32px; height: 32px; border-radius: 12px; margin-right: 8px;"
+                      style="width: 32px; height: 32px; border-radius: 50%;"
                     ></div>
                     <div
                       class="skeleton"
-                      style="width: 32px; height: 32px; border-radius: 12px; margin-right: 8px;"
-                    ></div>
-                    <div
-                      class="skeleton"
-                      style="width: 32px; height: 32px; border-radius: 12px;"
+                      style="width: 32px; height: 32px; border-radius: 50%;"
                     ></div>
                   </div>
                 </td>
@@ -138,7 +139,14 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 </td>
                 <td class="pr-date pr-vigencia-col">{{ row.validoHasta }}</td>
                 <td class="pr-type-col">
-                  <span class="pr-type-badge">{{ row.tipoRegistroNombre }}</span>
+                  <span
+                    class="pr-type-badge"
+                    [class.pr-type-badge--militar]="row.tipoRegistroCodigo === 'militar'"
+                    [class.pr-type-badge--civil]="row.tipoRegistroCodigo === 'civil'"
+                    [class.pr-type-badge--baena]="row.tipoRegistroCodigo === 'alumnos_baena'"
+                  >
+                    {{ row.tipoRegistroNombre }}
+                  </span>
                 </td>
                 <td class="pr-actions-col">
                   <div class="pr-actions">
@@ -153,13 +161,21 @@ import type { PersonalItem } from '../../models/personal-item.model';
                     </button>
                     <button
                       class="pr-icon-btn"
-                      title="Editar"
-                      matTooltip="Editar registro"
-                      (click)="edit.emit(row)"
                       type="button"
+                      title="Más acciones"
+                      matTooltip="Más acciones"
+                      [matMenuTriggerFor]="rowActionsMenu"
+                      aria-label="Más acciones"
                     >
-                      <mat-icon>edit</mat-icon>
+                      <mat-icon>more_vert</mat-icon>
                     </button>
+                    <mat-menu #rowActionsMenu="matMenu" xPosition="before" yPosition="below">
+                      <button mat-menu-item type="button" (click)="edit.emit(row)">
+                        <mat-icon>edit</mat-icon>
+                        <span>Editar</span>
+                      </button>
+                      <!-- Futuras acciones: agregar más mat-menu-item aquí -->
+                    </mat-menu>
                   </div>
                 </td>
               </tr>
@@ -167,6 +183,7 @@ import type { PersonalItem } from '../../models/personal-item.model';
           }
         </tbody>
       </table>
+      </div>
     </div>
 
     @if (!loading() && filteredDataLength() === 0) {

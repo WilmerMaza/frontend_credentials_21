@@ -353,13 +353,7 @@ export class CredentialEdit implements OnDestroy {
 
     const missing = this.getSubmitBlockers();
     if (missing.length > 0) {
-      const listHtml = missing.map((field) => `<li>${field}</li>`).join('');
-      await Swal.fire({
-        icon: 'error',
-        title: 'Formulario incompleto',
-        html: `<p style="margin:0 0 8px">Complete los siguientes campos:</p><ul style="text-align:left;margin:0;padding-left:1.25rem">${listHtml}</ul>`,
-        confirmButtonColor: '#163665',
-      });
+      this.scrollToFirstInvalidField();
       return;
     }
 
@@ -450,6 +444,27 @@ export class CredentialEdit implements OnDestroy {
       return;
     }
     void this.router.navigate(['/personal-registrado']);
+  }
+
+  private scrollToFirstInvalidField(): void {
+    if (typeof document === 'undefined') return;
+
+    requestAnimationFrame(() => {
+      const root = document.querySelector('app-credential-edit');
+      if (!root) return;
+
+      const target =
+        (root.querySelector('.reg-attach--error') as HTMLElement | null) ??
+        (root.querySelector('.mat-mdc-form-field.mat-form-field-invalid') as HTMLElement | null) ??
+        (root.querySelector('.reg-field-error') as HTMLElement | null);
+
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      const focusable = target?.querySelector<HTMLElement>(
+        'input, textarea, select, .mat-mdc-select-trigger, [tabindex="0"]',
+      );
+      focusable?.focus({ preventScroll: true });
+    });
   }
 
   private async loadCredential(id: string): Promise<void> {

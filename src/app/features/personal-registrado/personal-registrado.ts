@@ -2,6 +2,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
@@ -17,7 +18,6 @@ import {
   CREDENTIAL_STATUS_OPTIONS,
   type CredentialStatusCode,
 } from '../../shared/utils/credential-status.utils';
-// Import subcomponents
 import { PersonalMetricsComponent } from './components/personal-metrics/personal-metrics.component';
 import { PersonalSearchComponent } from './components/personal-search/personal-search.component';
 import { PersonalListMobileComponent } from './components/personal-list-mobile/personal-list-mobile.component';
@@ -34,6 +34,7 @@ export type { PersonalItem };
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
+    MatButtonModule,
     MatIconModule,
     BreadcrumbComponent,
     MatTooltipModule,
@@ -73,12 +74,11 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
     const expiradas = summary.expiradas ?? 0;
 
     return [
-      { label: 'Registrados', total, icon: 'group' },
-      { label: 'Activos', total: summary.activas, icon: 'check' },
-      { label: 'Inactivos', total: summary.inactivas, icon: 'close' },
-      { label: 'Expiradas', total: expiradas, icon: 'event_busy' },
-      { label: 'Pend. credencial', total: summary.pendientes, icon: 'chat_bubble' },
-      { label: 'Pendientes', total: summary.pendientes, icon: 'schedule' },
+      { label: 'Registrados', total, tone: 'primary' },
+      { label: 'ACTIVOS', total: summary.activas, tone: 'success' },
+      { label: 'INACTIVOS', total: summary.inactivas, tone: 'muted' },
+      { label: 'EXPIRADAS', total: expiradas, tone: 'muted' },
+      { label: 'PENDIENTES', total: summary.pendientes, tone: 'warning' },
     ];
   });
 
@@ -142,6 +142,11 @@ export class PersonalRegistrado implements OnInit, OnDestroy {
 
   toggleFilters(): void {
     this.filtersExpanded.update((v) => !v);
+  }
+
+  hasActiveFilters(): boolean {
+    const { nombre, correo, identificacion, estado } = this.searchForm.getRawValue();
+    return Boolean(nombre?.trim() || correo?.trim() || identificacion?.trim() || estado);
   }
 
   onSearch(): void {

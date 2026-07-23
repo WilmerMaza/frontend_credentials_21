@@ -34,8 +34,10 @@ import {
   getCredentialStatusBadgeClass,
   getCredentialStatusLabel,
 } from '../../shared/utils/credential-status.utils';
+import { generateBrandedQrDataUrl } from '../../shared/utils/branded-qr.utils';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
+const QR_CANVAS_SIZE = 280;
 
 @Component({
   selector: 'app-credential-view',
@@ -57,11 +59,17 @@ export class CredentialView implements OnInit, OnDestroy {
   private readonly mailService = inject(MailService);
   private breakpointSub?: { unsubscribe: () => void };
   private detailLoadSub?: { unsubscribe: () => void };
+  private qrGenerationToken = 0;
 
   credential = signal<CredentialData | null>(null);
+  private readonly credentialId = signal<string | null>(null);
   isMobile = signal(false);
   readonly pdfDownloading = signal(false);
   readonly sharing = signal(false);
+  /** Data URL del QR generado en cliente (con escudo). */
+  readonly qrUrl = signal('');
+  readonly qrLoading = signal(false);
+  readonly qrError = signal(false);
 
   readonly breadcrumbItems = [
     { label: 'Personal Registrado', url: '/personal-registrado' },
@@ -74,20 +82,6 @@ export class CredentialView implements OnInit, OnDestroy {
   readonly logoUrl = computed(() => {
     const c = this.credential();
     return c?.org?.logoUrl || DEFAULT_LOGO;
-  });
-
-  readonly qrUrl = computed(() => {
-    const c = this.credential();
-    if (!c) return '';
-    const data = encodeURIComponent(c.verificacion.qrData);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${data}`;
-  });
-
-  readonly qrUrlMobile = computed(() => {
-    const c = this.credential();
-    if (!c) return '';
-    const data = encodeURIComponent(c.verificacion.qrData);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${data}`;
   });
 
   readonly photoUrl = computed(() => {
@@ -113,7 +107,7 @@ export class CredentialView implements OnInit, OnDestroy {
       verificacion: c.verificacion,
       vigencia: c.vigencia,
       photoUrl: this.photoUrl(),
-      qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(c.verificacion.qrData)}`,
+      qrUrl: this.qrUrl(),
     };
   });
 
@@ -138,6 +132,8 @@ export class CredentialView implements OnInit, OnDestroy {
       return;
     }
 
+    this.credentialId.set(credentialId);
+
     this.detailLoadSub = this.personalListService.getById(credentialId).subscribe({
       next: (credential) => this.setCredential(credential),
       error: (err) => {
@@ -156,6 +152,9 @@ export class CredentialView implements OnInit, OnDestroy {
       validoHasta?: string;
       sha256?: string;
     };
+    if (cred.id) {
+      this.credentialId.set(cred.id);
+    }
     const extended: CredentialData = mapPersonalItemToCredentialData({
       ...cred,
       fechaNacimiento: ext.fechaNacimiento,
@@ -164,9 +163,42 @@ export class CredentialView implements OnInit, OnDestroy {
       sha256: ext.sha256 ?? 'A3F7C92E...4D8B92E1',
     });
     this.credential.set(extended);
+    void this.refreshBrandedQr(extended);
+  }
+
+  private async refreshBrandedQr(credential: CredentialData): Promise<void> {
+    const token = ++this.qrGenerationToken;
+    const payload = credential.verificacion.qrData;
+    const previous = this.qrUrl();
+
+    // Si ya hay QR, mantenlo visible mientras regeneramos (evita parpadeo al refrescar).
+    this.qrLoading.set(!previous);
+    this.qrError.set(false);
+
+    try {
+      const url = await generateBrandedQrDataUrl(payload, {
+        size: QR_CANVAS_SIZE,
+        logoUrl: credential.org.logoUrl || DEFAULT_LOGO,
+      });
+      if (token !== this.qrGenerationToken) return;
+      this.qrUrl.set(url);
+      this.qrError.set(false);
+    } catch (err) {
+      console.error('Error generando QR de credencial:', err);
+      if (token !== this.qrGenerationToken) return;
+      if (!previous) {
+        this.qrUrl.set('');
+        this.qrError.set(true);
+      }
+    } finally {
+      if (token === this.qrGenerationToken) {
+        this.qrLoading.set(false);
+      }
+    }
   }
 
   ngOnDestroy(): void {
+    this.qrGenerationToken++;
     this.breakpointSub?.unsubscribe();
     this.detailLoadSub?.unsubscribe();
   }
@@ -183,23 +215,33 @@ export class CredentialView implements OnInit, OnDestroy {
   async onDownloadPdf(): Promise<void> {
     if (this.pdfDownloading()) return;
 
-    const el = this.getPdfElement();
-    if (!el) return;
+    const id =
+      this.credentialId() ??
+      this.route.snapshot.paramMap.get('id') ??
+      null;
+    if (!id) {
+      void Swal.fire({
+        icon: 'error',
+        title: 'Error al descargar PDF',
+        text: 'No se pudo identificar la credencial.',
+        confirmButtonColor: '#163665',
+      });
+      return;
+    }
 
     this.pdfDownloading.set(true);
     try {
-      const blob = await this.credentialPdfService.generateBlobFromElement(el);
       const data = this.pdfData();
       const fileName = data
         ? this.credentialPdfService.buildFileName(data)
-        : 'credencial-militar.pdf';
-      this.credentialPdfService.downloadBlob(blob, fileName);
+        : `credencial-${id}.pdf`;
+      await this.credentialPdfService.downloadFromApi(id, fileName);
     } catch (err) {
-      console.error('Error al generar PDF:', err);
+      console.error('Error al descargar PDF:', err);
       void Swal.fire({
         icon: 'error',
-        title: 'Error al generar PDF',
-        text: 'No se pudo generar el archivo. Intente de nuevo.',
+        title: 'Error al descargar PDF',
+        text: getHttpErrorMessage(err),
         confirmButtonColor: '#163665',
       });
     } finally {

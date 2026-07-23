@@ -3,12 +3,14 @@ import {
   getCredentialDetailValue,
   getCredentialTypeLabel,
   normalizeTypeCode,
+  toCanonicalTypeCode,
   type PersonalItem,
 } from '../personal-registrado/models/personal-item.model';
 import { getPublicAppUrl, resolveCredentialPhotoUrl } from '../../shared/utils/url.utils';
 import { resolveEffectiveCredentialStatus } from '../../shared/utils/credential-expiration.utils';
 import type { CredentialData } from './credential-data.types';
 import type { CredentialPdfData } from './credential-view-pdf.component';
+import { generateBrandedQrDataUrl } from '../../shared/utils/branded-qr.utils';
 
 const DEFAULT_LOGO = '/images/ENAP.png';
 
@@ -24,8 +26,10 @@ export type PersonalItemWithExtras = PersonalItem & {
 export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): CredentialData {
   const emision = item.emision ?? item.fechaIngreso ?? '20/11/2025';
   const validoHasta = item.validoHasta || deriveValidoHasta(item.fechaIngreso);
-  const tipoCodigo = normalizeTypeCode(String(item.tipoRegistroCodigo ?? 'militar'));
-  const tipoNombre = item.tipoRegistroNombre || getCredentialTypeLabel(tipoCodigo);
+  const tipoCodigoRaw = String(item.tipoRegistroCodigo ?? 'militar');
+  const tipoCodigo = toCanonicalTypeCode(tipoCodigoRaw);
+  const tipoNombre =
+    item.tipoRegistroNombre || getCredentialTypeLabel(normalizeTypeCode(tipoCodigo));
   const variante = getCredentialVariant(tipoCodigo);
   const baseUrl = getPublicAppUrl();
 
@@ -73,13 +77,16 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
   };
 }
 
-export function buildCredentialPdfData(
+export async function buildCredentialPdfData(
   item: PersonalItemWithExtras,
   resolvedPhotoUrl?: string,
-): CredentialPdfData {
+): Promise<CredentialPdfData> {
   const credential = mapPersonalItemToCredentialData(item);
   const photo = resolvedPhotoUrl ?? resolveCredentialPhotoUrl(item.photoUrl);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(credential.verificacion.qrData)}`;
+  const qrUrl = await generateBrandedQrDataUrl(credential.verificacion.qrData, {
+    size: 280,
+    logoUrl: credential.org.logoUrl || DEFAULT_LOGO,
+  });
 
   return {
     org: credential.org,
@@ -102,21 +109,21 @@ export { deriveValidoHasta };
 
 function getCredentialVariant(typeCode: string): CredentialVariant {
   const normalized = normalizeTypeCode(typeCode);
-  if (normalized === 'cadetes' || normalized === 'inter-escuelas' || normalized.includes('inter')) {
-    return 'cadetes';
+  if (normalized === 'alumnos-baena' || normalized.includes('baena')) {
+    return 'alumnos_baena';
   }
   if (normalized.includes('civil')) return 'civil';
   return 'militar';
 }
 
 function getCredentialTitle(variant: CredentialVariant, tipoNombre: string): string {
-  if (variant === 'cadetes') return `CREDENCIAL ${tipoNombre.toUpperCase()}`;
+  if (variant === 'alumnos_baena') return `CREDENCIAL ${tipoNombre.toUpperCase()}`;
   if (variant === 'civil') return 'CREDENCIAL PERSONAL CIVIL';
   return 'CREDENCIAL DE IDENTIFICACIÓN';
 }
 
 function getCredentialSummary(variant: CredentialVariant, item: PersonalItem): string {
-  if (variant === 'cadetes') {
+  if (variant === 'alumnos_baena') {
     return (
       getCredentialDetailValue(item.detallesRegistro, 'sport', 'deporte') ??
       item.tipoRegistroNombre
@@ -131,7 +138,7 @@ function getCredentialSummary(variant: CredentialVariant, item: PersonalItem): s
 function buildPrimaryFields(variant: CredentialVariant, item: PersonalItem) {
   const details = item.detallesRegistro;
 
-  if (variant === 'cadetes') {
+  if (variant === 'alumnos_baena') {
     return compactFields([
       field('FUERZA', getCredentialDetailValue(details, 'force', 'fuerza') ?? item.unidad),
       field('DEPORTE', getCredentialDetailValue(details, 'sport', 'deporte')),

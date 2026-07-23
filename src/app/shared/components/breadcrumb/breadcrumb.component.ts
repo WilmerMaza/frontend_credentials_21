@@ -51,8 +51,8 @@ export interface BreadcrumbItem {
     .breadcrumb-nav {
       display: flex;
       align-items: center;
-      padding: 6px 0;
-      margin-bottom: 20px;
+      padding: 0;
+      margin-bottom: 8px;
       font-family: Inter, system-ui, -apple-system, sans-serif;
       overflow-x: auto;
       scrollbar-width: none; /* Firefox */
@@ -74,13 +74,13 @@ export interface BreadcrumbItem {
     .breadcrumb-item {
       display: flex;
       align-items: center;
-      font-size: 13.5px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 400;
       color: #64748b;
       min-width: 0;
       
       &.active {
-        font-weight: 600;
+        font-weight: 500;
         color: #0a2850;
       }
     }

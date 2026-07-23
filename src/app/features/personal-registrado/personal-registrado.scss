@@ -1,26 +1,25 @@
-/* ========================================
-   Personal registrado - diseño moderno
-   ======================================== */
+/* Personal registrado — refinamiento final (densidad / menos ruido) */
 
 :host {
   min-width: 0;
   overflow-x: hidden;
+  display: block;
+  background: transparent;
   --pr-navy: #0a2850;
-  --pr-navy-2: #0f356a;
-  --pr-bg: #f9fafb;
-  --pr-card: #ffffff;
-  --pr-text: #0f172a;
-  --pr-muted: #64748b;
-  --pr-border: #e2e8f0;
-  --pr-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-  --pr-shadow-soft: 0 6px 18px rgba(2, 6, 23, 0.06);
-  --pr-radius: 16px;
-  --pr-radius-sm: 12px;
+  --pr-text: #1c1b1f;
+  --pr-muted: #49454f;
+  --pr-outline: #cac4d0;
+  --pr-outline-variant: #c4c7c5;
+  --pr-surface: #ffffff;
+  --pr-page: #f4f6f9;
+  --pr-surface-container: #f0f2f5;
+  --pr-success: #2e7d32;
+  --pr-warning: #ed6c02;
+  --pr-error: #b3261e;
 }
 
 .pr-container {
-  padding-top: 16px;
-  max-width: none;
+  padding: 8px 0 16px;
   width: 100%;
   min-width: 0;
   margin: 0;
@@ -29,140 +28,141 @@
   max-height: calc(100vh - 56px - 40px);
   display: flex;
   flex-direction: column;
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    Arial,
-    sans-serif;
+  gap: 16px;
+  background: transparent;
+  box-sizing: border-box;
 }
 
-/* Header */
 .pr-header {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 0;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin: 0;
+  min-height: 0;
+}
+
+.pr-header__copy {
+  min-width: 0;
 }
 
 .pr-header__title {
-  font-size: clamp(24px, 4vw, 32px);
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
-  font-weight: 800;
-  color: var(--pr-text);
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--pr-navy);
 }
 
 .pr-header__subtitle {
-  margin: 0;
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
   color: var(--pr-muted);
-  font-weight: 500;
 }
 
 .pr-header__btn {
-  border: 0;
-  background: var(--pr-navy);
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  box-shadow: 0 14px 26px rgba(10, 40, 80, 0.18);
-  transition: 0.18s ease;
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
-.pr-header__btn:hover {
-  background: var(--pr-navy-2);
-  transform: translateY(-1px);
-}
-
 .pr-header__btn mat-icon {
-  color: #fff;
+  margin-right: 4px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 
-/* Table card (contenedor de filtros y tabla) */
-.pr-table-card {
+/* Card blanca sobre el fondo del layout (contraste intencional) */
+.pr-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-  background: var(--pr-card);
-  border: 1px solid var(--pr-border);
-  border-radius: 14px;
-  box-shadow: var(--pr-shadow-soft);
+  background: var(--pr-surface);
+  border: 1px solid color-mix(in srgb, var(--pr-outline-variant) 50%, transparent);
+  border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 0px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
 .pr-api-error {
-  margin: 10px 12px;
-  padding: 10px 12px;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  background: #fef2f2;
-  color: #991b1b;
-  font-size: 0.9rem;
-  font-weight: 700;
+  margin: 0 16px 8px;
+  padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, var(--pr-error) 35%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--pr-error) 8%, white);
+  color: var(--pr-error);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
-
-/* ========================================
-   Vista móvil (layout de tarjetas)
-   ======================================== */
 
 .m-page {
   width: 100%;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f7f9fc 0%, #f9fafb 80%);
+  background: transparent;
 }
 
 .m-content {
-  padding: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.m-header {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.m-header__btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.m-header__btn mat-icon {
+  margin-right: 4px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 
 .m-title {
-  margin: 14px 0 6px;
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  color: #0f172a;
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: var(--pr-navy);
 }
 
 .m-subtitle {
-  margin: 0 0 12px;
-  color: var(--pr-muted);
-  font-weight: 600;
+  margin: 2px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
   line-height: 1.35;
+  color: var(--pr-muted);
 }
 
 .m-footer {
   text-align: left;
-  padding: 14px 4px 24px;
+  padding: 8px 0 16px;
   color: var(--pr-muted);
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-/* Responsive global layout rule */
-@media (max-width: 1200px) {
-  .pr-container {
-    padding: 16px 20px 20px;
-  }
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
 @media (max-width: 1024px) {
   .pr-container {
-    padding: 14px 16px 20px;
+    padding: 8px 0 16px;
     height: calc(100vh - 56px - 36px);
     max-height: calc(100vh - 56px - 36px);
   }

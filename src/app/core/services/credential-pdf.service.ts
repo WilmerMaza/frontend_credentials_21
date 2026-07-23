@@ -119,6 +119,31 @@ export class CredentialPdfService {
     return `credencial-${pdfData.tipoRegistro.codigo}-${slug}.pdf`;
   }
 
+  /** Descarga el PDF generado por el backend (GET /credentials/:id/pdf). */
+  async downloadFromApi(credentialId: string, fileName?: string): Promise<void> {
+    const context = new HttpContext().set(BYPASS_SPINNER, true);
+    const blob = await firstValueFrom(
+      this.enap.request<Blob>('GET', `/credentials/${encodeURIComponent(credentialId)}/pdf`, {
+        responseType: 'blob',
+        context,
+      }),
+    );
+
+    if (!(blob instanceof Blob) || blob.size === 0) {
+      throw new Error('La respuesta del servidor no es un PDF válido');
+    }
+
+    // Errores JSON serializados como blob (p. ej. 4xx/5xx mal tipados)
+    if (blob.type.includes('json') || blob.type.includes('text')) {
+      throw new Error('La respuesta del servidor no es un PDF válido');
+    }
+
+    this.downloadBlob(
+      blob,
+      fileName?.trim() || `credencial-${credentialId}.pdf`,
+    );
+  }
+
   downloadBlob(blob: Blob, fileName: string): void {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');

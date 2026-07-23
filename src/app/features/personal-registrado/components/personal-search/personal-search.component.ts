@@ -1,7 +1,11 @@
 import { Component, input, model, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import type { CredentialStatusCode } from '../../../../shared/utils/credential-status.utils';
 
 export interface StatusFilterOption {
@@ -12,89 +16,96 @@ export interface StatusFilterOption {
 @Component({
   selector: 'app-personal-search',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+  ],
   styleUrls: ['./personal-search.component.scss'],
   template: `
-    <section class="filters" [class.filters--mobile]="isMobile()">
-      <div class="filters-accordion">
-        <button
-          type="button"
-          class="filters-trigger"
-          (click)="toggleFilters()"
-          [attr.aria-expanded]="filtersExpanded()"
-          aria-controls="personal-filters-panel"
-        >
-          <span class="filters-trigger__left">
-            <span class="filters-trigger__icon" aria-hidden="true">
-              <mat-icon>filter_list</mat-icon>
-            </span>
-            <span class="filters-trigger__title">Filtros de búsqueda</span>
-          </span>
-          <span class="filters-trigger__chev" [class.filters-trigger__chev--open]="filtersExpanded()">
-            <mat-icon>expand_more</mat-icon>
-          </span>
-        </button>
+    <section
+      class="filters"
+      [class.filters--mobile]="isMobile()"
+      [class.filters--collapsed]="!filtersExpanded()"
+    >
+      <div
+        id="personal-filters-panel"
+        class="filters-panel"
+        [class.filters-panel--expanded]="filtersExpanded()"
+      >
+        <div class="filters-grid">
+          <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
+            <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+            <input
+              matInput
+              type="text"
+              [formControl]="$any(searchForm().get('nombre'))"
+              placeholder="Buscar por nombre o apellido..."
+            />
+          </mat-form-field>
 
-        <div
-          id="personal-filters-panel"
-          class="filters-panel"
-          [class.filters-panel--expanded]="filtersExpanded() || !isCollapsible()"
-        >
-          <div class="filters-grid">
-            <label class="filter-field">
-              <mat-icon aria-hidden="true">search</mat-icon>
-              <input
-                type="text"
-                [formControl]="$any(searchForm().get('nombre'))"
-                placeholder="Buscar nombre o apellido"
-              />
-            </label>
+          <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
+            <mat-icon matPrefix aria-hidden="true">mail</mat-icon>
+            <input
+              matInput
+              type="text"
+              [formControl]="$any(searchForm().get('correo'))"
+              placeholder="Correo institucional"
+            />
+          </mat-form-field>
 
-            <label class="filter-field">
-              <mat-icon aria-hidden="true">mail</mat-icon>
-              <input
-                type="text"
-                [formControl]="$any(searchForm().get('correo'))"
-                placeholder="Correo institucional"
-              />
-            </label>
+          <mat-form-field appearance="outline" class="filter-field" subscriptSizing="dynamic">
+            <mat-icon matPrefix aria-hidden="true">badge</mat-icon>
+            <input
+              matInput
+              type="text"
+              [formControl]="$any(searchForm().get('identificacion'))"
+              placeholder="Identificación"
+            />
+          </mat-form-field>
 
-            <label class="filter-field">
-              <mat-icon aria-hidden="true">badge</mat-icon>
-              <input
-                type="text"
-                [formControl]="$any(searchForm().get('identificacion'))"
-                placeholder="Número de identificación"
-              />
-            </label>
+          <mat-form-field
+            appearance="outline"
+            class="filter-field filter-field--select"
+            subscriptSizing="dynamic"
+            floatLabel="always"
+          >
+            <mat-label>Estado</mat-label>
+            <mat-select [formControl]="$any(searchForm().get('estado'))">
+              <mat-option value="">Todos los estados</mat-option>
+              @for (option of statusOptions(); track option.value) {
+                <mat-option [value]="option.value">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-            <label class="filter-field filter-field--select">
-              <mat-icon aria-hidden="true">flag</mat-icon>
-              <select [formControl]="$any(searchForm().get('estado'))">
-                <option value="">Todos los estados</option>
-                @for (option of statusOptions(); track option.value) {
-                  <option [value]="option.value">{{ option.label }}</option>
-                }
-              </select>
-            </label>
-
-            <div class="filter-actions">
-              <button type="button" class="filter-btn filter-btn--primary" (click)="search.emit()">
-                <mat-icon>filter_list</mat-icon>
-                Buscar
-              </button>
-              <button type="button" class="filter-btn" (click)="clearSearch.emit()">Limpiar</button>
-            </div>
+          <div class="filter-actions">
+            <button
+              mat-stroked-button
+              color="primary"
+              type="button"
+              class="filter-btn filter-btn--search"
+              (click)="search.emit()"
+            >
+              <mat-icon>search</mat-icon>
+              Buscar
+            </button>
+            <button
+              mat-button
+              color="primary"
+              type="button"
+              class="filter-btn filter-btn--clear"
+              (click)="clearSearch.emit()"
+            >
+              Limpiar
+            </button>
           </div>
         </div>
       </div>
-
-      @if (isMobile()) {
-        <button type="button" class="filters-cta" (click)="register.emit()">
-          <span class="filters-cta__icon" aria-hidden="true">+</span>
-          Registrar nuevo personal
-        </button>
-      }
     </section>
   `,
 })
@@ -106,14 +117,6 @@ export class PersonalSearchComponent {
 
   search = output<void>();
   clearSearch = output<void>();
+  /** Conservado por compatibilidad; el CTA móvil vive en la página. */
   register = output<void>();
-
-  isCollapsible(): boolean {
-    return this.isMobile();
-  }
-
-  toggleFilters(): void {
-    if (!this.isCollapsible()) return;
-    this.filtersExpanded.update((v) => !v);
-  }
 }

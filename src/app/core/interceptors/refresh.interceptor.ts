@@ -1,27 +1,34 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, filter, ReplaySubject, switchMap, take, throwError } from 'rxjs';
+import {
+  catchError,
+  filter,
+  finalize,
+  map,
+  Observable,
+  shareReplay,
+  switchMap,
+  take,
+  throwError,
+} from 'rxjs';
 import { AuthService } from '../services/auth';
 
-let isRefreshing = false;
-let refreshDone$: ReplaySubject<boolean> | null = null;
+let refreshInFlight$: Observable<boolean> | null = null;
 
 /**
- * Interceptor que gestiona el refresco automático del token ante un 401.
- *
- * - Excluye las rutas de auth (login, refresh, logout, me) para evitar bucles.
- * - Si ya hay un refresh en curso, encola la petición fallida para reintentarla
- *   cuando el refresh termine.
- * - Si el refresh falla, llama a logout() y propaga el error.
+ * Ante 401: intenta POST /auth/refresh y reintenta la petición.
+ * Sin sesión (refresh también 401): propaga el error para que el JwtGuard mande a /login.
  */
 export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
-  // Excluir endpoints de auth para evitar bucles infinitos
+  // inject() solo es seguro en el cuerpo síncrono del interceptor
+  const auth = inject(AuthService);
+
   const isAuthUrl =
     req.url.includes('/auth/refresh') ||
     req.url.includes('/auth/logout') ||
-    req.url.includes('/auth/me') ||
     req.url.includes('/auth/login') ||
-    req.url.includes('/auth/session');
+    req.url.includes('/auth/register') ||
+    req.url.includes('/auth/csrf');
 
   const isPublicVerifyUrl = req.url.includes('/verify');
 
@@ -31,43 +38,33 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status !== 401) return throwError(() => err);
+      if (err.status !== 401) {
+        return throwError(() => err);
+      }
 
-      // ── Hay un refresh en curso: encolar y esperar ──────────────────────────
-      if (isRefreshing && refreshDone$) {
-        return refreshDone$.pipe(
-          filter(Boolean),
-          take(1),
-          switchMap(() => next(req.clone()))
+      if (!refreshInFlight$) {
+        refreshInFlight$ = auth.refresh().pipe(
+          map(() => true),
+          catchError((refreshErr: unknown) => {
+            if (auth.isAuthenticated()) {
+              auth.logout().subscribe({ error: () => {} });
+            } else {
+              auth.clearUser();
+            }
+            return throwError(() => refreshErr);
+          }),
+          finalize(() => {
+            refreshInFlight$ = null;
+          }),
+          shareReplay({ bufferSize: 1, refCount: false }),
         );
       }
 
-      // ── Iniciar ciclo de refresh ────────────────────────────────────────────
-      isRefreshing = true;
-      refreshDone$ = new ReplaySubject<boolean>(1);
-
-      const auth = inject(AuthService);
-
-      return auth.refresh().pipe(
-        switchMap(() => {
-          isRefreshing = false;
-          refreshDone$?.next(true);
-          refreshDone$?.complete();
-          refreshDone$ = null;
-          return next(req.clone());
-        }),
-
-        catchError((refreshErr: Error) => {
-          isRefreshing = false;
-          refreshDone$?.error(refreshErr);
-          refreshDone$ = null;
-
-          // Sesión inválida: logout y redirigir
-          auth.logout().subscribe({ error: () => {} });
-
-          return throwError(() => refreshErr);
-        })
+      return refreshInFlight$.pipe(
+        filter(Boolean),
+        take(1),
+        switchMap(() => next(req.clone())),
       );
-    })
+    }),
   );
 };

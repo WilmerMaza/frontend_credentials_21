@@ -1,23 +1,26 @@
 import { inject } from '@angular/core';
-import {
-  CanActivateFn,
-  Router
-} from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { CanActivateFn, Router } from '@angular/router';
+import { catchError, firstValueFrom, map, of } from 'rxjs';
 import { AuthService } from '../services/auth';
 
-
+/**
+ * Protege rutas privadas. Sin sesión válida → /login.
+ */
 export const JwtGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const loginTree = router.createUrlTree(['/login']);
 
-  // si ya hay usuario, pasas
-  if (auth.isAuthenticated()) return true;
-
-  try {
-    await firstValueFrom(auth.me()); // GET /auth/me → hidrata el usuario
+  if (auth.isAuthenticated()) {
     return true;
-  } catch {
-    return router.createUrlTree(['/login']);
   }
+
+  const ok = await firstValueFrom(
+    auth.me().pipe(
+      map(() => true),
+      catchError(() => of(false)),
+    ),
+  );
+
+  return ok ? true : loginTree;
 };

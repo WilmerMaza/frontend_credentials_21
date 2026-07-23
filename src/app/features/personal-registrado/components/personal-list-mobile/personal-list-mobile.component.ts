@@ -72,9 +72,8 @@ import type { PersonalItem } from '../../models/personal-item.model';
               </div>
             </div>
             <div class="actions">
-              <div class="a-btn skeleton" style="height: 44px; border-radius: 14px; flex: 1;"></div>
-              <div class="a-btn skeleton" style="height: 44px; border-radius: 14px; flex: 1;"></div>
-              <div class="a-btn skeleton" style="height: 44px; border-radius: 14px; flex: 1;"></div>
+              <div class="a-btn skeleton" style="height: 40px; border-radius: 4px; flex: 1;"></div>
+              <div class="a-btn skeleton" style="height: 40px; border-radius: 4px; flex: 1;"></div>
             </div>
           </article>
         }
@@ -93,7 +92,14 @@ import type { PersonalItem } from '../../models/personal-item.model';
                 <div>
                   <div class="name">{{ row.nombreCompleto }}</div>
                   <div class="meta">{{ row.identificacion }}</div>
-                  <div class="type-chip">{{ row.tipoRegistroNombre }}</div>
+                  <div
+                    class="type-chip"
+                    [class.type-chip--militar]="row.tipoRegistroCodigo === 'militar'"
+                    [class.type-chip--civil]="row.tipoRegistroCodigo === 'civil'"
+                    [class.type-chip--baena]="row.tipoRegistroCodigo === 'alumnos_baena'"
+                  >
+                    {{ row.tipoRegistroNombre }}
+                  </div>
                 </div>
               </div>
               <span

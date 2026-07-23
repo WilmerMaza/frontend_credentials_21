@@ -2,7 +2,6 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { VerificationService } from '../../core/services/verification.service';
@@ -22,7 +21,6 @@ import type { VerificationOutcome } from './verification.model';
   imports: [
     CommonModule,
     DatePipe,
-    MatToolbarModule,
     MatIconModule,
     MatProgressSpinnerModule,
   ],

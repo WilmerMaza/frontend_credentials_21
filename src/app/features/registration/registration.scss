@@ -24,8 +24,8 @@ $on-surface-variant: #64748b;
 $error: #dc2626;
 $success: #16a34a;
 $sticky-h: 72px;
-$sidebar-open: calc(250px - 10px);
-$sidebar-collapsed: 80px;
+$sidebar-open: 200px;
+$sidebar-collapsed: 64px;
 
 .reg-layout {
   min-height: 100%;

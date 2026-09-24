@@ -9,13 +9,13 @@ import {
   computed,
   ViewChild,
   ElementRef,
+  HostListener,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import Swal from 'sweetalert2';
 import {
-  CredentialViewPdfComponent,
   type CredentialPdfData,
 } from './credential-view-pdf.component';
 import { PersonalListService } from '../personal-registrado/data/personal-list.service';
@@ -44,12 +44,11 @@ const QR_CANVAS_SIZE = 280;
   standalone: true,
   templateUrl: './credential-view.html',
   styleUrls: ['./credential-view.scss'],
-  imports: [CommonModule, MatIconModule, CredentialViewPdfComponent, BreadcrumbComponent],
+  imports: [CommonModule, MatIconModule, BreadcrumbComponent],
 })
 export class CredentialView implements OnInit, OnDestroy {
   @ViewChild('credentialCardDesktop') credentialCardDesktop?: ElementRef<HTMLElement>;
   @ViewChild('credentialCardMobile') credentialCardMobile?: ElementRef<HTMLElement>;
-  @ViewChild('pdfTemplate') pdfTemplate?: ElementRef<HTMLElement>;
 
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -70,10 +69,12 @@ export class CredentialView implements OnInit, OnDestroy {
   readonly qrUrl = signal('');
   readonly qrLoading = signal(false);
   readonly qrError = signal(false);
+  readonly showQr = signal(false);
+  readonly showCard = signal(false);
 
   readonly breadcrumbItems = [
     { label: 'Personal Registrado', url: '/personal-registrado' },
-    { label: 'Visualización de Credencial' },
+    { label: 'Detalle de credencial' },
   ];
 
   readonly getCredentialStatusLabel = getCredentialStatusLabel;
@@ -207,9 +208,34 @@ export class CredentialView implements OnInit, OnDestroy {
     this.router.navigate(['/personal-registrado']);
   }
 
-  private getPdfElement(): HTMLElement | null {
-    const wrapper = this.pdfTemplate?.nativeElement;
-    return (wrapper?.querySelector('.pdf-card') ?? wrapper?.querySelector('.pdf-doc')) as HTMLElement | null;
+  onEdit(): void {
+    const id = this.credentialId() ?? this.route.snapshot.paramMap.get('id');
+    if (!id) return;
+    this.router.navigate(['/personal-registrado', 'editar', id]);
+  }
+
+  openQr(): void {
+    this.showCard.set(false);
+    this.showQr.set(true);
+  }
+
+  closeQr(): void {
+    this.showQr.set(false);
+  }
+
+  openCard(): void {
+    this.showQr.set(false);
+    this.showCard.set(true);
+  }
+
+  closeCard(): void {
+    this.showCard.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.showQr()) this.closeQr();
+    else if (this.showCard()) this.closeCard();
   }
 
   async onDownloadPdf(): Promise<void> {
@@ -252,62 +278,128 @@ export class CredentialView implements OnInit, OnDestroy {
   async onShare(): Promise<void> {
     if (this.sharing() || this.pdfDownloading()) return;
 
-    const c = this.credential();
-    const email = c?.contacto?.correo?.trim();
+    const id =
+      this.credentialId() ??
+      this.route.snapshot.paramMap.get('id') ??
+      null;
+    const email = this.credential()?.contacto?.correo?.trim();
+    const nombre = this.credential()?.persona?.nombreCompleto?.trim() ?? '';
+
+    if (!id) {
+      void Swal.fire({
+        icon: 'error',
+        title: 'No se puede enviar',
+        text: 'No se pudo identificar la credencial.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0a2548',
+      });
+      return;
+    }
+
     if (!email) {
       void Swal.fire({
-        icon: 'error',
+        icon: 'warning',
         title: 'Correo no disponible',
         text: 'Esta credencial no tiene un correo institucional registrado.',
-        confirmButtonColor: '#163665',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0a2548',
       });
       return;
     }
 
-    const el = this.getPdfElement();
-    if (!el) {
-      void Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se pudo preparar la credencial para enviar.',
-        confirmButtonColor: '#163665',
-      });
-      return;
-    }
+    const emailSafe = this.escapeHtml(email);
+    const nombreSafe = this.escapeHtml(nombre);
 
-    this.sharing.set(true);
-    void Swal.fire({
-      title: 'Enviando credencial...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
+    const confirm = await Swal.fire({
+      icon: 'question',
+      title: 'Enviar credencial',
+      html: `
+        <p style="margin:0 0 12px;color:#475569;font-size:0.9375rem;line-height:1.45">
+          Se enviará el <strong>PDF oficial</strong>
+          ${nombreSafe ? ` de <strong>${nombreSafe}</strong>` : ''}
+          al correo institucional:
+        </p>
+        <p style="
+          margin:0;
+          padding:10px 14px;
+          background:#f0f4f8;
+          border-radius:8px;
+          color:#0a2548;
+          font-weight:600;
+          font-size:0.9375rem;
+          word-break:break-all;
+        ">${emailSafe}</p>
+      `,
+      showCancelButton: true,
+      focusCancel: true,
+      reverseButtons: true,
+      confirmButtonText: 'Enviar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0a2548',
+      cancelButtonColor: '#64748b',
     });
 
+    if (!confirm.isConfirmed) return;
+
+    this.sharing.set(true);
+
     try {
-      const blob = await this.credentialPdfService.generateBlobFromElement(el);
-      const nombre = c!.persona.nombreCompleto;
-      await firstValueFrom(
-        this.mailService.sendCredentialEmail(email, blob, {
-          subject: nombre ? `Tu credencial - ${nombre}` : 'Tu credencial',
-        }),
+      // Mismo PDF oficial (backend PDFKit) que descarga y el correo de registro
+      const result = await firstValueFrom(
+        this.mailService.shareCredentialFromApi(id),
       );
-      Swal.close();
-      void Swal.fire({
+      const sentTo = this.escapeHtml(result.to || email);
+
+      await Swal.fire({
         icon: 'success',
         title: 'Credencial enviada',
-        text: `Se envió la credencial a ${email}.`,
-        confirmButtonColor: '#163665',
+        html: `
+          <p style="margin:0 0 10px;color:#475569;font-size:0.9375rem;line-height:1.45">
+            El documento oficial llegó correctamente a:
+          </p>
+          <p style="
+            margin:0;
+            padding:10px 14px;
+            background:#ecfdf5;
+            border-radius:8px;
+            color:#065f46;
+            font-weight:600;
+            font-size:0.9375rem;
+            word-break:break-all;
+          ">${sentTo}</p>
+        `,
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0a2548',
+        timer: 5600,
+        timerProgressBar: true,
       });
     } catch (err) {
       console.error('Error al compartir credencial:', err);
-      Swal.close();
-      void Swal.fire({
+      await Swal.fire({
         icon: 'error',
         title: 'No se pudo enviar',
-        text: getHttpErrorMessage(err, 'mail'),
-        confirmButtonColor: '#163665',
+        html: `
+          <p style="margin:0 0 8px;color:#475569;font-size:0.9375rem;line-height:1.45;text-align:left">
+            ${this.escapeHtml(getHttpErrorMessage(err, 'mail'))}
+          </p>
+          <p style="margin:0;color:#94a3b8;font-size:0.8125rem;text-align:left">
+            Destino: ${emailSafe}
+          </p>
+        `,
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0a2548',
       });
     } finally {
       this.sharing.set(false);
     }
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

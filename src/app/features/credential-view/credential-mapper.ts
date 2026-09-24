@@ -32,6 +32,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
     item.tipoRegistroNombre || getCredentialTypeLabel(normalizeTypeCode(tipoCodigo));
   const variante = getCredentialVariant(tipoCodigo);
   const baseUrl = getPublicAppUrl();
+  const estado = resolveEffectiveCredentialStatus(item.estado, item.validoHasta);
 
   return {
     org: {
@@ -58,7 +59,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
       variante,
     },
     resumen: getCredentialSummary(variante, item),
-    estado: resolveEffectiveCredentialStatus(item.estado, item.validoHasta),
+    estado,
     camposPrincipales: buildPrimaryFields(variante, item),
     camposSecundarios: buildSecondaryFields(variante, item),
     contacto: {
@@ -68,7 +69,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
     verificacion: {
       qrData: `${baseUrl}/verify/${encodeURIComponent(item.identificacion)}?type=${encodeURIComponent(tipoCodigo)}`,
       sha256: item.sha256 ?? 'A3F7C92E...4D8B92E1',
-      verificado: true,
+      verificado: estado === 'ACTIVE',
     },
     vigencia: {
       emision,
@@ -140,37 +141,31 @@ function buildPrimaryFields(variant: CredentialVariant, item: PersonalItem) {
 
   if (variant === 'alumnos_baena') {
     return compactFields([
+      field('IDENTIFICACIÓN', item.identificacion),
       field('FUERZA', getCredentialDetailValue(details, 'force', 'fuerza') ?? item.unidad),
       field('DEPORTE', getCredentialDetailValue(details, 'sport', 'deporte')),
       field('CURSO / AÑO', formatCourse(getCredentialDetailValue(details, 'course', 'curso'))),
-      field('FECHA DE NACIMIENTO', item.fechaNacimiento),
     ]);
   }
 
   if (variant === 'civil') {
     return compactFields([
+      field('IDENTIFICACIÓN', item.identificacion),
       field('TIPO DE IDENTIFICACIÓN', item.tipoIdentificacion),
-      field('NÚMERO DE IDENTIFICACIÓN', item.identificacion),
-      field('FECHA DE NACIMIENTO', item.fechaNacimiento),
       field('TELÉFONO', item.telefono),
     ]);
   }
 
   return compactFields([
+    field('IDENTIFICACIÓN', item.identificacion),
     field('RANGO', item.rango),
     field('FUERZA', getCredentialDetailValue(details, 'force', 'fuerza')),
     field('UNIDAD', item.unidad),
   ]);
 }
 
-function buildSecondaryFields(variant: CredentialVariant, item: PersonalItem) {
-  const fields = [field('CORREO INSTITUCIONAL', item.correo)];
-
-  if (variant !== 'civil') {
-    fields.push(field('IDENTIFICACIÓN', item.identificacion));
-  }
-
-  return compactFields(fields);
+function buildSecondaryFields(_variant: CredentialVariant, item: PersonalItem) {
+  return compactFields([field('CORREO INSTITUCIONAL', item.correo)]);
 }
 
 function field(label: string, value?: string) {

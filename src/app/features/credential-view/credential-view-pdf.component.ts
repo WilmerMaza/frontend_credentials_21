@@ -57,10 +57,6 @@ export interface CredentialPdfData extends CredentialData {
                   <div class="pdf-value">{{ field.value }}</div>
                 </div>
               }
-              <div class="pdf-row">
-                <div class="pdf-label">FECHA DE NACIMIENTO</div>
-                <div class="pdf-value">{{ data.persona.fechaNacimiento || 'NO REGISTRA' }}</div>
-              </div>
               @if (data.contacto.correo) {
                 <div class="pdf-row">
                   <div class="pdf-label">CORREO INSTITUCIONAL</div>

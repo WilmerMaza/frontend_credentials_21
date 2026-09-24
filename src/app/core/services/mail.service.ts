@@ -11,6 +11,12 @@ export interface SendCredentialEmailOptions {
   fileName?: string;
 }
 
+export interface ShareCredentialResult {
+  success: boolean;
+  message: string;
+  to: string;
+}
+
 const DEFAULT_SUBJECT = 'Tu credencial';
 const DEFAULT_MESSAGE = '<p>Adjunta encontrarás tu credencial.</p>';
 const DEFAULT_FILE_NAME = 'credencial.pdf';
@@ -19,6 +25,21 @@ const DEFAULT_FILE_NAME = 'credencial.pdf';
 export class MailService {
   constructor(private readonly enap: EnapApi) {}
 
+  /**
+   * Reenvía el PDF oficial generado en backend (mismo que registro/descarga).
+   * POST /credentials/:id/share
+   */
+  shareCredentialFromApi(credentialId: string): Observable<ShareCredentialResult> {
+    return this.enap.request<ShareCredentialResult>(
+      'POST',
+      `/credentials/${encodeURIComponent(credentialId)}/share`,
+      {
+        context: new HttpContext().set(BYPASS_SPINNER, true),
+      },
+    );
+  }
+
+  /** @deprecated Preferir shareCredentialFromApi (PDF oficial del backend). */
   sendCredentialEmail(
     to: string,
     pdfBlob: Blob,

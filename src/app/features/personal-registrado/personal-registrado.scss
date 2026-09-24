@@ -19,16 +19,16 @@
 }
 
 .pr-container {
-  padding: 8px 0 16px;
+  padding: 4px 0 8px;
   width: 100%;
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  height: calc(100vh - 56px - 40px);
-  max-height: calc(100vh - 56px - 40px);
+  height: calc(100vh - 48px - 32px);
+  max-height: calc(100vh - 48px - 32px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   background: transparent;
   box-sizing: border-box;
 }
@@ -163,7 +163,7 @@
 @media (max-width: 1024px) {
   .pr-container {
     padding: 8px 0 16px;
-    height: calc(100vh - 56px - 36px);
-    max-height: calc(100vh - 56px - 36px);
+    height: calc(100vh - 48px - 28px);
+    max-height: calc(100vh - 48px - 28px);
   }
 }

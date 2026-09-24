@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, afterNextRender, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
 import { LayoutLoadingService } from '../../core/services/layout-loading.service';
 import { ButtonsDashboard } from '../../layout/widgets/buttons-dashboard/buttons-dashboard';
 import { DashboardContentSkeleton } from '../../layout/widgets/dashboard-content-skeleton/dashboard-content-skeleton';
@@ -34,7 +33,9 @@ import { DashboardCard } from '../../models/interface';
             >
               ¡Bienvenido!
             </h1>
-            <p class="welcome-subtitle">Registro de personal y gestión de usuarios de la Escuela Naval</p>
+            <p class="welcome-subtitle">
+              Registro de personal y gestión de usuarios de la Escuela Naval
+            </p>
             <div class="hero-decoration"></div>
           </div>
         </div>
@@ -60,10 +61,7 @@ export class Dashboard {
     setTimeout(() => this.chromeActive.set(false), 2500);
   }
 
-  constructor(
-    private route$: ActivatedRoute,
-    private router: Router,
-  ) {
+  constructor() {
     this.layoutLoading.setLoading(false);
   }
 

@@ -29,17 +29,17 @@ import type { PersonalItem } from '../../models/personal-item.model';
         <table class="pr-table">
         <colgroup>
           <col style="width: 5%" />
+          <col style="width: 16%" />
+          <col style="width: 12%" />
+          <col style="width: 18%" />
+          <col style="width: 12%" />
+          <col style="width: 10%" />
           <col style="width: 15%" />
           <col style="width: 12%" />
-          <col style="width: 17%" />
-          <col style="width: 10%" />
-          <col style="width: 9%" />
-          <col style="width: 24%" />
-          <col style="width: 8%" />
         </colgroup>
         <thead>
           <tr>
-            <th>Fotografía</th>
+            <th class="pr-photo-col" scope="col" title="Fotografía">Foto</th>
             <th>Nombre completo</th>
             <th>Identificación</th>
             <th>Correo institucional</th>
@@ -53,13 +53,12 @@ import type { PersonalItem } from '../../models/personal-item.model';
           @if (loading()) {
             @for (row of [1, 2, 3, 4, 5]; track row) {
               <tr>
-                <td>
+                <td class="pr-photo-col">
                   <div class="pr-cell-photo">
                     <div
                       class="pr-photo skeleton"
-                      style="width: 36px; height: 36px; border-radius: 50%;"
+                      style="width: 28px; height: 28px; border-radius: 50%;"
                     ></div>
-                    <div class="pr-name skeleton" style="width: 80px; height: 16px;"></div>
                   </div>
                 </td>
                 <td>
@@ -104,7 +103,7 @@ import type { PersonalItem } from '../../models/personal-item.model';
           } @else {
             @for (row of pagedData(); track row.id) {
               <tr>
-                <td>
+                <td class="pr-photo-col">
                   <div class="pr-cell-photo">
                     <div class="pr-photo">
                       <img
@@ -113,7 +112,6 @@ import type { PersonalItem } from '../../models/personal-item.model';
                         (error)="onPhotoError($event)"
                       />
                     </div>
-                    <!-- <div class="pr-name">{{ row.nombreCompleto }}</div> -->
                   </div>
                 </td>
                 <td>

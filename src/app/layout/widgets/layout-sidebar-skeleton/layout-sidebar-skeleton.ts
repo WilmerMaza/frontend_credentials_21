@@ -21,11 +21,11 @@ import { Component } from '@angular/core';
     }
     .sidebar-skeleton {
       height: 100vh;
-      background: #0c2e57;
+      background: #0a2548;
       display: flex;
       flex-direction: column;
-      padding: 4rem 1rem 1rem;
-      gap: 0.5rem;
+      padding: 1.25rem 0.75rem 0.75rem;
+      gap: 0.35rem;
     }
     .skeleton-sidebar-avatar,
     .skeleton-sidebar-item,
@@ -45,15 +45,15 @@ import { Component } from '@angular/core';
       100% { background-position: -200% 0; }
     }
     .skeleton-sidebar-avatar {
-      width: 60px;
-      height: 60px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       flex-shrink: 0;
       align-self: center;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
     }
     .skeleton-sidebar-item {
-      height: 44px;
+      height: 36px;
       width: 100%;
     }
     .skeleton-sidebar-logo {

@@ -1,4 +1,4 @@
-$color-naval: #0c2e57;
+$color-naval: #0a2548;
 $color-text-primary: #1a2332;
 $color-text-secondary: #5c6b7a;
 
@@ -9,8 +9,8 @@ $color-text-secondary: #5c6b7a;
   margin: 0;
   border: none;
   background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
-  border-radius: 20px;
-  padding: 1.25rem;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
   text-align: left;
   cursor: pointer;
   appearance: none;
@@ -22,15 +22,14 @@ $color-text-secondary: #5c6b7a;
   justify-content: space-between;
   box-sizing: border-box;
   box-shadow:
-    0 4px 20px rgba(12, 46, 87, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 2px 10px rgba(10, 37, 72, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: hidden;
   transition:
-    transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1),
-    background 220ms ease;
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    background 200ms ease;
 }
 
 .card::before {
@@ -39,112 +38,111 @@ $color-text-secondary: #5c6b7a;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 5px;
+  width: 4px;
   background: transparent;
-  border-radius: 5px 0 0 5px;
-  transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 4px 0 0 4px;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card:hover {
-  transform: translateY(-6px) scale(1.01);
+  transform: translateY(-3px);
   box-shadow:
-    0 20px 40px rgba(12, 46, 87, 0.15),
-    0 8px 16px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    0 12px 28px rgba(10, 37, 72, 0.12),
+    0 4px 10px rgba(0, 0, 0, 0.05);
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .card:hover::before {
   background: $color-naval;
-  box-shadow: 0 0 12px rgba(12, 46, 87, 0.3);
+  box-shadow: 0 0 10px rgba(10, 37, 72, 0.25);
 }
 
 .card:active {
-  transform: translateY(-2px) scale(1);
-  box-shadow: 0 8px 24px rgba(12, 46, 87, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(10, 37, 72, 0.1);
 }
 
 .card-top {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  min-height: 2.5rem;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+  min-height: 0;
 }
 
 .icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transition: transform 220ms ease, box-shadow 220ms ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+  transition: transform 200ms ease, box-shadow 200ms ease;
 
   mat-icon {
-    font-size: 28px;
-    width: 28px;
-    height: 28px;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
   }
 }
 
 .card:hover .icon {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .title {
   font-weight: 700;
   color: $color-text-primary;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   line-height: 1.2;
   font-family: 'Inter', sans-serif;
 }
 
 .total {
-  font-size: 2.25rem;
+  font-size: 1.75rem;
   font-weight: 800;
   color: $color-text-primary;
   line-height: 1;
-  margin-bottom: 0.4rem;
-  min-height: 2.2rem;
+  margin-bottom: 0.3rem;
+  min-height: 0;
   font-family: 'Inter', sans-serif;
   letter-spacing: -0.02em;
 }
 
 .description {
-  font-size: 0.95rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: $color-text-secondary;
-  line-height: 1.5;
-  margin: 0 0 0.9rem 0;
+  line-height: 1.4;
+  margin: 0 0 0.55rem;
   font-family: 'Inter', sans-serif;
   flex: 1;
 }
 
 .subtitle {
   color: $color-text-secondary;
-  font-size: 0.9rem;
-  margin-bottom: 0.9rem;
-  min-height: 0.9rem;
+  font-size: 0.8125rem;
+  margin-bottom: 0.55rem;
+  min-height: 0;
 }
 
 .cta {
   color: $color-naval;
   font-weight: 700;
-  font-size: 0.95rem;
-  min-height: 0.95rem;
+  font-size: 0.8125rem;
+  min-height: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  transition: all 200ms ease;
+  gap: 0.3rem;
+  transition: all 180ms ease;
 }
 
 .card:hover .cta {
-  gap: 0.6rem;
+  gap: 0.5rem;
   color: #0a3d6b;
 }
 

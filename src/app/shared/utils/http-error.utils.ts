@@ -15,8 +15,8 @@ export function getHttpErrorMessage(err: unknown, context?: string): string {
   if (status === 404) {
     if (context === 'mail') {
       return (
-        'El servidor no expone POST /mail/send-email. ' +
-        'Verifique que el backend (back.escuela) esté actualizado y en ejecución.'
+        'No se pudo compartir la credencial (endpoint no disponible). ' +
+        'Verifique que el backend esté actualizado y en ejecución.'
       );
     }
     return 'Recurso no encontrado en el servidor.';

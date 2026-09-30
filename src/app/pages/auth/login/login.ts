@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
+import { consumeReturnUrl } from '../../../core/guard/return-url';
 import { LoginService } from '../../../core/services/login.service';
 
 @Component({
@@ -59,7 +60,7 @@ export class Login {
     this.loginService.login({ email: identifier, password }).subscribe({
       next: () => {
         this.isLoading = false;
-        this.router.navigate(['/']);
+        void this.router.navigateByUrl(consumeReturnUrl());
       },
       error: (err) => {
         this.isLoading = false;

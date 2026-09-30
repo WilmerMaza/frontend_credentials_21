@@ -8,11 +8,11 @@ export const routes: Routes = [
   // Auth pública
   {
     path: 'login',
-    // canActivate: [JwtGuard],
     loadComponent: () => import('./pages/auth/login/login').then((m) => m.Login),
   },
   {
-    path: 'verify/:identityNumber',
+    path: 'verify/:code',
+    canActivate: [JwtGuard],
     loadComponent: () =>
       import('./features/verification/verification').then((m) => m.Verification),
   },

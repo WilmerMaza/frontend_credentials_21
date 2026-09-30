@@ -1,4 +1,4 @@
-import { HttpContext, HttpParams } from '@angular/common/http';
+import { HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { EnapApi } from './enap.api';
@@ -9,13 +9,13 @@ import type { PublicVerificationResponse } from '../../features/verification/ver
 export class VerificationService {
   constructor(private readonly api: EnapApi) {}
 
-  verify(identityNumber: string, type: string): Observable<PublicVerificationResponse> {
-    const params = new HttpParams()
-      .set('identity', identityNumber.trim())
-      .set('type', type.trim());
-
+  verify(code: string): Observable<PublicVerificationResponse> {
     const context = new HttpContext().set(BYPASS_SPINNER, true);
 
-    return this.api.get<PublicVerificationResponse>('/verify', params, context);
+    return this.api.get<PublicVerificationResponse>(
+      `/verify/${encodeURIComponent(code.trim())}`,
+      undefined,
+      context,
+    );
   }
 }

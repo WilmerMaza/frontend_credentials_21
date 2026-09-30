@@ -30,9 +30,7 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
     req.url.includes('/auth/register') ||
     req.url.includes('/auth/csrf');
 
-  const isPublicVerifyUrl = req.url.includes('/verify');
-
-  if (isAuthUrl || isPublicVerifyUrl) {
+  if (isAuthUrl) {
     return next(req);
   }
 

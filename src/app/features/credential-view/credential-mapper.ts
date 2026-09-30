@@ -67,7 +67,7 @@ export function mapPersonalItemToCredentialData(item: PersonalItemWithExtras): C
       telefono: item.telefono,
     },
     verificacion: {
-      qrData: `${baseUrl}/verify/${encodeURIComponent(item.identificacion)}?type=${encodeURIComponent(tipoCodigo)}`,
+      qrData: `${baseUrl}/verify/${encodeURIComponent(item.id)}`,
       sha256: item.sha256 ?? 'A3F7C92E...4D8B92E1',
       verificado: estado === 'ACTIVE',
     },

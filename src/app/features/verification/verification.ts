@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute } from '@angular/router';
-import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { VerificationService } from '../../core/services/verification.service';
 import {
   getCredentialStatusBadgeClass,
@@ -72,6 +72,8 @@ export class Verification {
         return 'Credencial revocada';
       case 'SUSPENDED':
         return 'Credencial suspendida';
+      case 'TRANSFERRED':
+        return 'Persona trasladada';
       case 'NOT_FOUND':
         return 'Credencial no encontrada';
       default:
@@ -80,16 +82,15 @@ export class Verification {
   }
 
   constructor() {
-    combineLatest([this.route.paramMap, this.route.queryParamMap])
+    this.route.paramMap
       .pipe(
-        switchMap(([params, query]) => {
-          const identityNumber = params.get('identityNumber')?.trim() ?? '';
-          const type = query.get('type')?.trim() ?? '';
+        switchMap((params) => {
+          const code = params.get('code')?.trim() ?? '';
           this.loading.set(true);
           this.loadError.set(null);
           this.viewModel.set(null);
 
-          if (!identityNumber || !type) {
+          if (!code) {
             this.loading.set(false);
             this.loadError.set(
               'El enlace de verificación no es válido. Escanee el código QR de la credencial.',
@@ -97,7 +98,7 @@ export class Verification {
             return of(null);
           }
 
-          return this.verificationService.verify(identityNumber, type).pipe(
+          return this.verificationService.verify(code).pipe(
             map((response) => mapVerificationResponse(response)),
             catchError(() => {
               this.loadError.set(
@@ -128,6 +129,8 @@ function statusIconFor(outcome: VerificationOutcome | null): string {
     case 'REVOKED':
     case 'SUSPENDED':
       return 'block';
+    case 'TRANSFERRED':
+      return 'swap_horiz';
     default:
       return 'error_outline';
   }
@@ -139,6 +142,8 @@ function statusClassFor(outcome: VerificationOutcome | null): string {
       return 'verify-status--valid';
     case 'PENDING':
       return 'verify-status--pending';
+    case 'TRANSFERRED':
+      return 'verify-status--transferred';
     default:
       return 'verify-status--invalid';
   }

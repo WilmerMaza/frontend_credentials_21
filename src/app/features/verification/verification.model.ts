@@ -6,6 +6,7 @@ export type VerificationOutcome =
   | 'EXPIRED'
   | 'REVOKED'
   | 'SUSPENDED'
+  | 'TRANSFERRED'
   | 'NOT_FOUND';
 
 export interface PublicCredentialSnapshot {

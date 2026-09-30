@@ -2,14 +2,14 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { catchError, firstValueFrom, map, of } from 'rxjs';
 import { AuthService } from '../services/auth';
+import { rememberReturnUrl } from './return-url';
 
 /**
- * Protege rutas privadas. Sin sesión válida → /login.
+ * Protege rutas privadas. Sin sesión válida → /login, conservando la URL pedida.
  */
-export const JwtGuard: CanActivateFn = async () => {
+export const JwtGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const loginTree = router.createUrlTree(['/login']);
 
   if (auth.isAuthenticated()) {
     return true;
@@ -22,5 +22,10 @@ export const JwtGuard: CanActivateFn = async () => {
     ),
   );
 
-  return ok ? true : loginTree;
+  if (ok) {
+    return true;
+  }
+
+  rememberReturnUrl(state.url);
+  return router.createUrlTree(['/login']);
 };

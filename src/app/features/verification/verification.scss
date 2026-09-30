@@ -229,6 +229,15 @@
   }
 }
 
+.verify-status--transferred {
+  border-color: #93c5fd;
+  background: #eff6ff;
+
+  mat-icon {
+    color: #2563eb;
+  }
+}
+
 .verify-status--invalid {
   border-color: #fca5a5;
   background: #fef2f2;
